@@ -12,11 +12,14 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: BSH-Vorhersage laden
         run: |
-          curl -fsS --retry 3 --max-time 60 \
-            "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json" \
+          curl -fsSL --retry 3 --max-time 60 -H "Accept: application/geo+json" -D headers.tmp -o raw.tmp \
+            "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json&lang=de"
+          cat headers.tmp
+          head -c 300 raw.tmp; echo
+          cat raw.tmp \
             | jq -c '.properties | {
                 forecast_timestamp,
                 automated_curveforecast_timestamp,
@@ -28,6 +31,7 @@ jobs:
               }' > norderney.json.tmp
           test -s norderney.json.tmp
           mv norderney.json.tmp norderney.json
+          rm -f raw.tmp headers.tmp
       - name: Datei speichern
         run: |
           git config user.name "github-actions[bot]"
