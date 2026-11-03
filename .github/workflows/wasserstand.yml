@@ -15,12 +15,9 @@ jobs:
       - uses: actions/checkout@v5
       - name: BSH-Vorhersage laden
         run: |
-          curl -fsSL --retry 3 --max-time 60 -H "Accept: application/geo+json" -D headers.tmp -o raw.tmp \
+          curl -fsSL --retry 3 --max-time 60 -H "Accept: application/geo+json" -o raw.tmp \
             "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json&lang=de"
-          cat headers.tmp
-          head -c 300 raw.tmp; echo
-          cat raw.tmp \
-            | jq -c '.properties | {
+          jq -c '.properties | {
                 forecast_timestamp,
                 automated_curveforecast_timestamp,
                 mean_high_water,
@@ -28,10 +25,10 @@ jobs:
                 forecast_text: .forecast_text.de,
                 high_water_low_water: [.high_water_low_water[] | {event_timestamp, event, tidal_prediction_value, forecast_value, mos_forecast_r0_value}],
                 curve: [.curve[] | {timestamp, tidal_prediction, measurement, automated_curve_forecast}]
-              }' > norderney.json.tmp
+              }' raw.tmp > norderney.json.tmp
           test -s norderney.json.tmp
           mv norderney.json.tmp norderney.json
-          rm -f raw.tmp headers.tmp
+          rm -f raw.tmp
       - name: Datei speichern
         run: |
           git config user.name "github-actions[bot]"
