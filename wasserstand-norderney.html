@@ -82,6 +82,7 @@
     <div class="label" id="now-label">Daten werden geladen …</div>
     <div class="value" id="now-value">–</div>
     <div class="trend" id="trend"></div>
+    <div class="trend" id="next-level"></div>
     <div class="error" id="error" hidden></div>
     <button id="reload" type="button">Jetzt aktualisieren</button>
   </section>
@@ -475,10 +476,12 @@
       const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + clock(next.t) : "";
       const trend = trendText(measured);
       $("trend").textContent = [trend, nextText && "Nächstes " + nextText].filter(Boolean).join(" · ");
+      $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
     } else {
       $("now-label").textContent = "Stand " + clock(now);
       $("now-value").textContent = "–";
       $("trend").textContent = "";
+      $("next-level").textContent = "";
       $("error").textContent = "Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.";
       $("error").hidden = false;
     }
