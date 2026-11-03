@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wasserstand Norderney</title>
+<style>
+  :root {
+    --bg: #eef3f5; --card: #ffffff; --text: #12262f; --muted: #557079;
+    --line: #d5e0e4; --accent: #0b6a8a; --hw: #0b6a8a; --nw: #8a5a0b; --error: #a12f24;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
+      --line: #2a414b; --accent: #6cc4e0; --hw: #6cc4e0; --nw: #e0b56c; --error: #f08a7e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+  .sub { color: var(--muted); font-size: .9rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px; margin-top: 16px;
+  }
+  .label { color: var(--muted); font-size: .95rem; }
+  .value {
+    font-size: clamp(3.2rem, 18vw, 4.6rem); font-weight: 700; line-height: 1.1;
+    letter-spacing: -.02em; margin: 4px 0; font-variant-numeric: tabular-nums;
+  }
+  .trend { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+  .detail { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+  h2 { margin: 0 0 8px; font-size: 1rem; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
+  th, td { padding: 8px 4px; text-align: left; border-top: 1px solid var(--line); white-space: nowrap; }
+  td .day { display: block; color: var(--muted); font-size: .8rem; }
+  th { border-top: 0; color: var(--muted); font-size: .8rem; font-weight: 500; }
+  th.num, td.num { text-align: right; }
+  .HW { color: var(--hw); font-weight: 600; }
+  .NW { color: var(--nw); font-weight: 600; }
+  .error { color: var(--error); font-weight: 600; }
+  .note { color: var(--muted); font-size: .8rem; margin-top: 12px; }
+  a { color: var(--accent); }
+  button {
+    margin-top: 14px; padding: 8px 14px; font: inherit; color: var(--text);
+    background: transparent; border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  }
+  [hidden] { display: none; }
+  :root[data-theme="dark"] {
+    --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
+    --line: #2a414b; --accent: #6cc4e0; --hw: #6cc4e0; --nw: #e0b56c; --error: #f08a7e;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pegel Norderney, Riffgat</h1>
+  <div class="sub">Höhen in Metern über Pegelnull</div>
+
+  <section class="card" aria-live="polite">
+    <div class="label" id="now-label">Daten werden geladen …</div>
+    <div class="value" id="now-value">–</div>
+    <div class="trend" id="trend"></div>
+    <div class="detail" id="measured"></div>
+    <div class="error" id="error" hidden></div>
+    <button id="reload" type="button">Jetzt aktualisieren</button>
+  </section>
+
+  <section class="card" id="events-card" hidden>
+    <h2>Nächste Hoch- und Niedrigwasser</h2>
+    <table>
+      <thead><tr><th>Zeit</th><th>Wasser</th><th class="num">Höhe</th><th class="num">Mittel ±</th><th>Quelle</th></tr></thead>
+      <tbody id="events"></tbody>
+    </table>
+    <div class="note">Quelle „BSH“ ist die geprüfte Vorhersage, „Modell“ die automatische Vorhersage und „Gezeiten“ die reine Gezeitenrechnung ohne Wetter.</div>
+  </section>
+
+  <div class="note" id="source">
+    Daten: <a href="https://wasserstand.bsh.de/norderney_riffgat" target="_blank" rel="noopener">Bundesamt für Seeschifffahrt und Hydrographie (BSH)</a>, CC BY 4.0. Ohne Gewähr.
+  </div>
+</main>
+
+<script>
+  const BSH_URL = "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json";
+  const PEGEL_URL = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/currentmeasurement.json";
+  const REFRESH_MS = 5 * 60 * 1000;
+
+  const $ = (id) => document.getElementById(id);
+  const metres = (cm) => (cm / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m";
+  const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }) + " Uhr";
+  const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: "Europe/Berlin" });
+  const parseTime = (s) => new Date(String(s).replace(" ", "T"));
+
+  function number(v) {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  async function getJson(url) {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return response.json();
+  }
+
+  // Combines measurements and model forecast into one line and reads off the value for "now".
+  function currentLevel(curve, now) {
+    const points = (curve || []).map((p) => ({
+      t: parseTime(p.timestamp),
+      measured: number(p.measurement),
+      forecast: number(p.automated_curve_forecast),
+    })).sort((a, b) => a.t - b.t);
+
+    const measuredPoints = points.filter((p) => p.measured !== null && p.t <= now);
+    const lastMeasured = measuredPoints[measuredPoints.length - 1] || null;
+
+    const line = points
+      .map((p) => ({ t: p.t, v: p.measured !== null ? p.measured : p.forecast }))
+      .filter((p) => p.v !== null);
+
+    let estimate = null;
+    for (let i = 0; i < line.length - 1; i++) {
+      const a = line[i], b = line[i + 1];
+      if (a.t <= now && now <= b.t) {
+        const span = b.t - a.t;
+        estimate = span === 0 ? a.v : a.v + (b.v - a.v) * ((now - a.t) / span);
+        break;
+      }
+    }
+    return { lastMeasured, estimate };
+  }
+
+  function eventValue(e) {
+    const checked = number(e.forecast_value);
+    if (checked !== null) return { cm: checked, source: "BSH" };
+    const model = number(e.mos_forecast_r0_value);
+    if (model !== null) return { cm: model, source: "Modell" };
+    return { cm: number(e.tidal_prediction_value), source: "Gezeiten" };
+  }
+
+  function showEvents(properties, now) {
+    const upcoming = (properties.high_water_low_water || [])
+      .map((e) => ({ ...e, t: parseTime(e.event_timestamp) }))
+      .filter((e) => e.t > now)
+      .sort((a, b) => a.t - b.t);
+
+    const body = $("events");
+    body.replaceChildren();
+    upcoming.slice(0, 8).forEach((e) => {
+      const { cm, source } = eventValue(e);
+      const mean = number(e.event === "HW" ? properties.mean_high_water : properties.mean_low_water);
+      const diff = cm !== null && mean !== null ? Math.round(cm - mean) : null;
+      const row = document.createElement("tr");
+      const timeCell = document.createElement("td");
+      const dayLine = document.createElement("span");
+      dayLine.className = "day";
+      dayLine.textContent = day(e.t);
+      timeCell.append(dayLine, clock(e.t));
+      row.append(timeCell);
+      const cells = [
+        [e.event === "HW" ? "Hoch" : "Niedrig", e.event === "HW" ? "HW" : "NW"],
+        [cm !== null ? metres(cm) : "–", "num"],
+        [diff !== null ? (diff > 0 ? "+" : diff < 0 ? "−" : "") + Math.abs(diff) + " cm" : "–", "num"],
+        [source, ""],
+      ];
+      cells.forEach(([text, cls]) => {
+        const td = document.createElement("td");
+        td.textContent = text;
+        if (cls) td.className = cls;
+        row.append(td);
+      });
+      body.append(row);
+    });
+    $("events-card").hidden = upcoming.length === 0;
+    return upcoming[0] || null;
+  }
+
+  function showError(message) {
+    $("error").textContent = message;
+    $("error").hidden = false;
+  }
+
+  async function load() {
+    const now = new Date();
+    $("error").hidden = true;
+
+    try {
+      const properties = (await getJson(BSH_URL)).properties;
+      const { lastMeasured, estimate } = currentLevel(properties.curve, now);
+      const next = showEvents(properties, now);
+
+      if (estimate !== null) {
+        $("now-label").textContent = "Jetzt, " + clock(now);
+        $("now-value").textContent = metres(estimate);
+      } else if (lastMeasured) {
+        $("now-label").textContent = "Letzte Messung, " + clock(lastMeasured.t);
+        $("now-value").textContent = metres(lastMeasured.measured);
+      } else {
+        throw new Error("Keine Werte in der Antwort");
+      }
+
+      $("trend").textContent = next
+        ? (next.event === "HW" ? "↗ Wasser steigt" : "↘ Wasser fällt") +
+          " bis " + clock(next.t)
+        : "";
+      $("measured").textContent = lastMeasured
+        ? "Zuletzt gemessen: " + metres(lastMeasured.measured) + " um " + clock(lastMeasured.t)
+        : "";
+      return;
+    } catch (bshError) {
+      console.warn("BSH nicht erreichbar:", bshError);
+    }
+
+    try {
+      const m = await getJson(PEGEL_URL);
+      const value = number(m.value);
+      if (value === null) throw new Error("Kein Messwert");
+      $("now-label").textContent = "Letzte Messung, " + clock(parseTime(m.timestamp));
+      $("now-value").textContent = metres(value);
+      $("trend").textContent = "";
+      $("measured").textContent = "Messwert von PEGELONLINE. Die BSH-Vorhersage ist gerade nicht erreichbar.";
+      $("events-card").hidden = true;
+    } catch (pegelError) {
+      console.warn("PEGELONLINE nicht erreichbar:", pegelError);
+      $("now-label").textContent = "Stand " + clock(now);
+      $("now-value").textContent = "–";
+      $("trend").textContent = "";
+      $("measured").textContent = "";
+      showError("Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.");
+    }
+  }
+
+  $("reload").addEventListener("click", load);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  setInterval(load, REFRESH_MS);
+  load();
+</script>
+</body>
+</html>
