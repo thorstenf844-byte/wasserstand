@@ -1,0 +1,37 @@
+name: Wasserstandsdaten aktualisieren
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: BSH-Vorhersage laden
+        run: |
+          curl -fsS --retry 3 --max-time 60 \
+            "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json" \
+            | jq -c '.properties | {
+                forecast_timestamp,
+                automated_curveforecast_timestamp,
+                mean_high_water,
+                mean_low_water,
+                forecast_text: .forecast_text.de,
+                high_water_low_water: [.high_water_low_water[] | {event_timestamp, event, tidal_prediction_value, forecast_value, mos_forecast_r0_value}],
+                curve: [.curve[] | {timestamp, tidal_prediction, measurement, automated_curve_forecast}]
+              }' > norderney.json.tmp
+          test -s norderney.json.tmp
+          mv norderney.json.tmp norderney.json
+      - name: Datei speichern
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add norderney.json
+          git diff --staged --quiet || git commit -m "Vorhersage aktualisieren"
+          git push

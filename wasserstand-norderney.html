@@ -6,21 +6,31 @@
 <title>Wasserstand Norderney</title>
 <style>
   :root {
+    color-scheme: light;
     --bg: #eef3f5; --card: #ffffff; --text: #12262f; --muted: #557079;
-    --line: #d5e0e4; --accent: #0b6a8a; --hw: #0b6a8a; --nw: #8a5a0b; --error: #a12f24;
+    --line: #d5e0e4; --accent: #0b6a8a; --error: #a12f24;
+    --measured: #2a78d6; --forecast: #eb6834; --tide: #9aa9af;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
+      color-scheme: dark;
       --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
-      --line: #2a414b; --accent: #6cc4e0; --hw: #6cc4e0; --nw: #e0b56c; --error: #f08a7e;
+      --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+      --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
     }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
+    --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+    --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  main { max-width: 560px; margin: 0 auto; padding: 24px 16px 40px; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 40px; }
   h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
   .sub { color: var(--muted); font-size: .9rem; }
   .card {
@@ -30,19 +40,30 @@
   .label { color: var(--muted); font-size: .95rem; }
   .value {
     font-size: clamp(3.2rem, 18vw, 4.6rem); font-weight: 700; line-height: 1.1;
-    letter-spacing: -.02em; margin: 4px 0; font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em; margin: 4px 0;
   }
   .trend { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
   .detail { color: var(--muted); font-size: .9rem; margin-top: 8px; }
   h2 { margin: 0 0 8px; font-size: 1rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+  #chart { position: relative; touch-action: pan-y; outline-offset: 2px; }
+  #chart svg { display: block; width: 100%; }
+  #chart text { font: 11px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  #chart text.strong { fill: var(--text); font-weight: 600; }
+  #tip {
+    position: absolute; top: 0; pointer-events: none; background: var(--card); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem;
+    line-height: 1.35; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  #tip b { font-weight: 600; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
   th, td { padding: 8px 4px; text-align: left; border-top: 1px solid var(--line); white-space: nowrap; }
   td .day { display: block; color: var(--muted); font-size: .8rem; }
   th { border-top: 0; color: var(--muted); font-size: .8rem; font-weight: 500; }
   th.num, td.num { text-align: right; }
-  .HW { color: var(--hw); font-weight: 600; }
-  .NW { color: var(--nw); font-weight: 600; }
-  .error { color: var(--error); font-weight: 600; }
+  .kind { font-weight: 600; }
+  .error { color: var(--error); font-weight: 600; margin-top: 8px; }
   .note { color: var(--muted); font-size: .8rem; margin-top: 12px; }
   a { color: var(--accent); }
   button {
@@ -50,10 +71,6 @@
     background: transparent; border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
   }
   [hidden] { display: none; }
-  :root[data-theme="dark"] {
-    --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
-    --line: #2a414b; --accent: #6cc4e0; --hw: #6cc4e0; --nw: #e0b56c; --error: #f08a7e;
-  }
 </style>
 </head>
 <body>
@@ -65,34 +82,45 @@
     <div class="label" id="now-label">Daten werden geladen …</div>
     <div class="value" id="now-value">–</div>
     <div class="trend" id="trend"></div>
-    <div class="detail" id="measured"></div>
     <div class="error" id="error" hidden></div>
     <button id="reload" type="button">Jetzt aktualisieren</button>
   </section>
 
+  <section class="card" id="chart-card" hidden>
+    <h2>Wasserkurve</h2>
+    <div class="legend" id="legend"></div>
+    <div id="chart" tabindex="0" role="img"></div>
+    <div class="note">Tippe auf die Kurve, um einzelne Werte zu sehen.</div>
+  </section>
+
   <section class="card" id="events-card" hidden>
-    <h2>Nächste Hoch- und Niedrigwasser</h2>
-    <table>
+    <h2>Erwartetes Hoch- und Niedrigwasser</h2>
+    <div class="detail" id="forecast-text"></div>
+    <table style="margin-top:10px">
       <thead><tr><th>Zeit</th><th>Wasser</th><th class="num">Höhe</th><th class="num">Mittel ±</th><th>Quelle</th></tr></thead>
       <tbody id="events"></tbody>
     </table>
-    <div class="note">Quelle „BSH“ ist die geprüfte Vorhersage, „Modell“ die automatische Vorhersage und „Gezeiten“ die reine Gezeitenrechnung ohne Wetter.</div>
+    <div class="note"><span id="forecast-age"></span> „BSH“ ist die geprüfte Vorhersage, „Modell“ die automatische Vorhersage und „Gezeiten“ die reine Gezeitenrechnung ohne Wetter.</div>
   </section>
 
-  <div class="note" id="source">
-    Daten: <a href="https://wasserstand.bsh.de/norderney_riffgat" target="_blank" rel="noopener">Bundesamt für Seeschifffahrt und Hydrographie (BSH)</a>, CC BY 4.0. Ohne Gewähr.
+  <div class="note">
+    Messwerte: <a href="https://www.pegelonline.wsv.de/gast/stammdaten?pegelnr=9360010" target="_blank" rel="noopener">PEGELONLINE</a> (Wasserstraßen- und Schifffahrtsverwaltung des Bundes).
+    Vorhersage: <a href="https://wasserstand.bsh.de/norderney_riffgat" target="_blank" rel="noopener">Bundesamt für Seeschifffahrt und Hydrographie (BSH)</a>, CC BY 4.0, gekürzt. Ohne Gewähr.
   </div>
 </main>
 
 <script>
-  const BSH_URL = "https://gdi.bsh.de/ldproxy/rest/services/WaterLevelForecast/collections/waterlevelforecastdata/items/norderney_riffgat?f=json";
-  const PEGEL_URL = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/currentmeasurement.json";
+  const FORECAST_URL = "https://raw.githubusercontent.com/thorstenf844-byte/wasserstand/main/norderney.json";
+  const PEGEL_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/";
   const REFRESH_MS = 5 * 60 * 1000;
+  const HOUR = 3600 * 1000;
+  const TZ = "Europe/Berlin";
 
   const $ = (id) => document.getElementById(id);
-  const metres = (cm) => (cm / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " m";
-  const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }) + " Uhr";
-  const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: "Europe/Berlin" });
+  const decimal = (cm) => (cm / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const metres = (cm) => decimal(cm) + " m";
+  const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) + " Uhr";
+  const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ });
   const parseTime = (s) => new Date(String(s).replace(" ", "T"));
 
   function number(v) {
@@ -107,31 +135,49 @@
     return response.json();
   }
 
-  // Combines measurements and model forecast into one line and reads off the value for "now".
-  function currentLevel(curve, now) {
-    const points = (curve || []).map((p) => ({
-      t: parseTime(p.timestamp),
-      measured: number(p.measurement),
-      forecast: number(p.automated_curve_forecast),
-    })).sort((a, b) => a.t - b.t);
-
-    const measuredPoints = points.filter((p) => p.measured !== null && p.t <= now);
-    const lastMeasured = measuredPoints[measuredPoints.length - 1] || null;
-
-    const line = points
-      .map((p) => ({ t: p.t, v: p.measured !== null ? p.measured : p.forecast }))
-      .filter((p) => p.v !== null);
-
-    let estimate = null;
-    for (let i = 0; i < line.length - 1; i++) {
-      const a = line[i], b = line[i + 1];
-      if (a.t <= now && now <= b.t) {
-        const span = b.t - a.t;
-        estimate = span === 0 ? a.v : a.v + (b.v - a.v) * ((now - a.t) / span);
-        break;
-      }
+  async function loadMeasurements() {
+    try {
+      const list = await getJson(PEGEL_BASE + "measurements.json?start=PT14H");
+      const points = list
+        .map((p) => ({ t: parseTime(p.timestamp), v: number(p.value) }))
+        .filter((p) => p.v !== null)
+        .sort((a, b) => a.t - b.t);
+      if (points.length) return points;
+    } catch (e) {
+      console.warn("PEGELONLINE-Verlauf nicht erreichbar:", e);
     }
-    return { lastMeasured, estimate };
+    try {
+      const m = await getJson(PEGEL_BASE + "currentmeasurement.json");
+      const v = number(m.value);
+      return v === null ? [] : [{ t: parseTime(m.timestamp), v }];
+    } catch (e) {
+      console.warn("PEGELONLINE-Messwert nicht erreichbar:", e);
+      return [];
+    }
+  }
+
+  async function loadForecast() {
+    try {
+      return await getJson(FORECAST_URL);
+    } catch (e) {
+      console.warn("Vorhersagedatei nicht erreichbar:", e);
+      return null;
+    }
+  }
+
+  function trendText(points) {
+    if (points.length < 2) return "";
+    const latest = points[points.length - 1];
+    const target = latest.t.getTime() - 30 * 60 * 1000;
+    const earlier = points
+      .filter((p) => p.t.getTime() <= latest.t.getTime() - 20 * 60 * 1000 && p.t.getTime() >= target - 15 * 60 * 1000)
+      .sort((a, b) => Math.abs(a.t - target) - Math.abs(b.t - target))[0];
+    if (!earlier) return "";
+    const minutes = Math.round((latest.t - earlier.t) / 60000);
+    const diff = Math.round(latest.v - earlier.v);
+    if (Math.abs(diff) < 2) return "→ Kaum Änderung in " + minutes + " Min.";
+    if (diff > 0) return "↗ Wasser steigt: +" + diff + " cm in " + minutes + " Min.";
+    return "↘ Wasser fällt: −" + Math.abs(diff) + " cm in " + minutes + " Min.";
   }
 
   function eventValue(e) {
@@ -142,18 +188,20 @@
     return { cm: number(e.tidal_prediction_value), source: "Gezeiten" };
   }
 
-  function showEvents(properties, now) {
-    const upcoming = (properties.high_water_low_water || [])
-      .map((e) => ({ ...e, t: parseTime(e.event_timestamp) }))
-      .filter((e) => e.t > now)
+  function upcomingEvents(forecast, now) {
+    if (!forecast) return [];
+    return (forecast.high_water_low_water || [])
+      .map((e) => ({ ...e, t: parseTime(e.event_timestamp), ...eventValue(e) }))
+      .filter((e) => e.t > now && e.cm !== null)
       .sort((a, b) => a.t - b.t);
+  }
 
+  function showEvents(forecast, events) {
     const body = $("events");
     body.replaceChildren();
-    upcoming.slice(0, 8).forEach((e) => {
-      const { cm, source } = eventValue(e);
-      const mean = number(e.event === "HW" ? properties.mean_high_water : properties.mean_low_water);
-      const diff = cm !== null && mean !== null ? Math.round(cm - mean) : null;
+    events.slice(0, 8).forEach((e) => {
+      const mean = number(e.event === "HW" ? forecast.mean_high_water : forecast.mean_low_water);
+      const diff = mean !== null ? Math.round(e.cm - mean) : null;
       const row = document.createElement("tr");
       const timeCell = document.createElement("td");
       const dayLine = document.createElement("span");
@@ -161,13 +209,12 @@
       dayLine.textContent = day(e.t);
       timeCell.append(dayLine, clock(e.t));
       row.append(timeCell);
-      const cells = [
-        [e.event === "HW" ? "Hoch" : "Niedrig", e.event === "HW" ? "HW" : "NW"],
-        [cm !== null ? metres(cm) : "–", "num"],
+      [
+        [e.event === "HW" ? "Hoch" : "Niedrig", "kind"],
+        [metres(e.cm), "num"],
         [diff !== null ? (diff > 0 ? "+" : diff < 0 ? "−" : "") + Math.abs(diff) + " cm" : "–", "num"],
-        [source, ""],
-      ];
-      cells.forEach(([text, cls]) => {
+        [e.source, ""],
+      ].forEach(([text, cls]) => {
         const td = document.createElement("td");
         td.textContent = text;
         if (cls) td.className = cls;
@@ -175,63 +222,270 @@
       });
       body.append(row);
     });
-    $("events-card").hidden = upcoming.length === 0;
-    return upcoming[0] || null;
+
+    const text = String(forecast.forecast_text || "").replace(/<[^>]*>/g, "").trim();
+    $("forecast-text").textContent = text;
+    const stamp = forecast.automated_curveforecast_timestamp || forecast.forecast_timestamp;
+    $("forecast-age").textContent = stamp ? "Vorhersage vom " + day(parseTime(stamp)) + ", " + clock(parseTime(stamp)) + "." : "";
+    $("events-card").hidden = events.length === 0;
   }
 
-  function showError(message) {
-    $("error").textContent = message;
-    $("error").hidden = false;
+  // ---- Chart ----------------------------------------------------------------
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  let chartState = null;
+
+  function el(name, attrs, parent, text) {
+    const node = document.createElementNS(SVG_NS, name);
+    Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+    if (text !== undefined) node.textContent = text;
+    if (parent) parent.append(node);
+    return node;
+  }
+
+  function berlinHour(d) {
+    const part = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", hour12: false, timeZone: TZ }).format(d);
+    return parseInt(part, 10) % 24;
+  }
+
+  function interpolate(series, t) {
+    if (!series.length || t < series[0].t || t > series[series.length - 1].t) return null;
+    for (let i = 0; i < series.length - 1; i++) {
+      const a = series[i], b = series[i + 1];
+      if (a.t <= t && t <= b.t) {
+        if (b.t - a.t > 2 * HOUR) return null;
+        return b.t - a.t === 0 ? a.v : a.v + (b.v - a.v) * ((t - a.t) / (b.t - a.t));
+      }
+    }
+    return null;
+  }
+
+  function drawChart(data) {
+    const box = $("chart");
+    const width = Math.max(box.clientWidth, 260);
+    const height = 250;
+    const m = { top: 22, right: 8, bottom: 26, left: 30 };
+    const { now, measured, forecastLine, tide, events, meanHigh } = data;
+    const start = now.getTime() - 12 * HOUR;
+    const end = now.getTime() + 36 * HOUR;
+    const inWindow = (p) => p.t.getTime() >= start && p.t.getTime() <= end;
+
+    const values = [measured, forecastLine, tide].flat().filter(inWindow).map((p) => p.v);
+    events.filter(inWindow).forEach((e) => values.push(e.cm));
+    if (meanHigh !== null) values.push(meanHigh);
+    const yMin = Math.floor(Math.min(...values) / 100) * 100;
+    const yMax = Math.ceil(Math.max(...values) / 100) * 100;
+
+    const x = (t) => m.left + ((t.getTime ? t.getTime() : t) - start) / (end - start) * (width - m.left - m.right);
+    const y = (v) => height - m.bottom - (v - yMin) / (yMax - yMin) * (height - m.top - m.bottom);
+
+    box.replaceChildren();
+    const svg = el("svg", { viewBox: `0 0 ${width} ${height}`, height, "aria-hidden": "true" }, box);
+
+    for (let v = yMin; v <= yMax; v += 100) {
+      el("line", { x1: m.left, x2: width - m.right, y1: y(v), y2: y(v), stroke: "var(--line)", "stroke-width": 1 }, svg);
+      el("text", { x: m.left - 6, y: y(v) + 4, "text-anchor": "end" }, svg, String(v / 100));
+    }
+
+    for (let t = Math.ceil(start / HOUR) * HOUR; t <= end; t += HOUR) {
+      const d = new Date(t);
+      if (berlinHour(d) % 6 !== 0) continue;
+      const px = x(t);
+      el("line", { x1: px, x2: px, y1: height - m.bottom, y2: height - m.bottom + 4, stroke: "var(--line)" }, svg);
+      const midnight = berlinHour(d) === 0;
+      const label = midnight
+        ? d.toLocaleDateString("de-DE", { weekday: "short", timeZone: TZ })
+        : String(berlinHour(d));
+      el("text", {
+        x: px, y: height - 8, "text-anchor": "middle", class: midnight ? "strong" : "",
+      }, svg, label);
+    }
+
+    if (meanHigh !== null) {
+      el("line", { x1: m.left, x2: width - m.right, y1: y(meanHigh), y2: y(meanHigh), stroke: "var(--tide)", "stroke-width": 1 }, svg);
+    }
+
+    const path = (series, color, w) => {
+      const pts = series.filter(inWindow);
+      if (pts.length < 2) return;
+      let dPath = "";
+      pts.forEach((p, i) => {
+        const gap = i > 0 && p.t - pts[i - 1].t > 2 * HOUR;
+        dPath += (i === 0 || gap ? "M" : "L") + x(p.t).toFixed(1) + " " + y(p.v).toFixed(1);
+      });
+      el("path", { d: dPath, fill: "none", stroke: color, "stroke-width": w, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    };
+    path(tide, "var(--tide)", 1.5);
+    path(forecastLine, "var(--forecast)", 2);
+    path(measured, "var(--measured)", 2);
+
+    // "Now" marker
+    el("line", { x1: x(now), x2: x(now), y1: m.top - 6, y2: height - m.bottom, stroke: "var(--text)", "stroke-width": 1 }, svg);
+    el("text", { x: x(now), y: m.top - 10, "text-anchor": "middle", class: "strong" }, svg, "jetzt");
+
+    // High and low water markers with selective labels
+    let lastLabelX = -100;
+    events.filter(inWindow).forEach((e) => {
+      const px = x(e.t), py = y(e.cm);
+      el("circle", { cx: px, cy: py, r: 4, fill: "var(--forecast)", stroke: "var(--card)", "stroke-width": 2 }, svg);
+      if (px - lastLabelX < 34) return;
+      lastLabelX = px;
+      const above = e.event === "HW";
+      const clampedX = Math.min(Math.max(px, m.left + 14), width - m.right - 14);
+      el("text", { x: clampedX, y: above ? py - 9 : py + 17, "text-anchor": "middle", class: "strong" }, svg, decimal(e.cm));
+    });
+
+    const cross = el("line", { y1: m.top, y2: height - m.bottom, stroke: "var(--muted)", "stroke-width": 1, visibility: "hidden" }, svg);
+    let tip = document.createElement("div");
+    tip.id = "tip";
+    tip.hidden = true;
+    box.append(tip);
+
+    chartState = { x, start, end, width, m, measured, forecastLine, tide, cross, tip, cursor: null };
+  }
+
+  function showTip(t) {
+    const s = chartState;
+    if (!s) return;
+    t = Math.min(Math.max(t, s.start), s.end);
+    s.cursor = t;
+    const px = s.x(t);
+    s.cross.setAttribute("x1", px);
+    s.cross.setAttribute("x2", px);
+    s.cross.setAttribute("visibility", "visible");
+    const d = new Date(t);
+    const rows = [["Gemessen", interpolate(s.measured, d)], ["Vorhersage", interpolate(s.forecastLine, d)], ["Gezeiten", interpolate(s.tide, d)]]
+      .filter(([, v]) => v !== null);
+    const tip = s.tip;
+    tip.replaceChildren();
+    const head = document.createElement("b");
+    head.textContent = day(d) + ", " + clock(d);
+    tip.append(head);
+    rows.forEach(([name, v]) => {
+      const line = document.createElement("div");
+      line.textContent = name + ": " + metres(v);
+      tip.append(line);
+    });
+    tip.hidden = false;
+    const left = Math.min(Math.max(px - tip.offsetWidth / 2, 0), s.width - tip.offsetWidth);
+    tip.style.left = left + "px";
+  }
+
+  function hideTip() {
+    if (!chartState) return;
+    chartState.cross.setAttribute("visibility", "hidden");
+    chartState.tip.hidden = true;
+    chartState.cursor = null;
+  }
+
+  function pointerTime(event) {
+    const s = chartState;
+    const rect = $("chart").getBoundingClientRect();
+    const fraction = (event.clientX - rect.left - s.m.left) / (s.width - s.m.left - s.m.right);
+    return s.start + fraction * (s.end - s.start);
+  }
+
+  $("chart").addEventListener("pointerdown", (e) => { if (chartState) showTip(pointerTime(e)); });
+  $("chart").addEventListener("pointermove", (e) => { if (chartState) showTip(pointerTime(e)); });
+  $("chart").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideTip(); });
+  $("chart").addEventListener("keydown", (e) => {
+    if (!chartState || (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Escape")) return;
+    e.preventDefault();
+    if (e.key === "Escape") return hideTip();
+    const current = chartState.cursor === null ? Date.now() : chartState.cursor;
+    showTip(current + (e.key === "ArrowRight" ? HOUR / 2 : -HOUR / 2));
+  });
+
+  let lastData = null;
+  window.addEventListener("resize", () => { if (lastData) drawChart(lastData); });
+
+  function showChart(now, measured, forecast, events) {
+    const curve = forecast ? (forecast.curve || []).map((p) => ({
+      t: parseTime(p.timestamp),
+      forecast: number(p.automated_curve_forecast),
+      tide: number(p.tidal_prediction),
+      measured: number(p.measurement),
+    })).sort((a, b) => a.t - b.t) : [];
+
+    const measuredLine = measured.length > 1
+      ? measured
+      : curve.filter((p) => p.measured !== null).map((p) => ({ t: p.t, v: p.measured }));
+    const lastMeasured = measuredLine.length ? measuredLine[measuredLine.length - 1].t : now;
+    const forecastLine = curve
+      .filter((p) => p.forecast !== null && p.t >= lastMeasured)
+      .map((p) => ({ t: p.t, v: p.forecast }));
+    const tide = curve.filter((p) => p.tide !== null).map((p) => ({ t: p.t, v: p.tide }));
+
+    if (measuredLine.length + forecastLine.length + tide.length < 2) {
+      $("chart-card").hidden = true;
+      lastData = null;
+      chartState = null;
+      return;
+    }
+
+    const legend = $("legend");
+    legend.replaceChildren();
+    [["Gemessen", "--measured", measuredLine], ["Vorhersage", "--forecast", forecastLine], ["Gezeitenrechnung", "--tide", tide]]
+      .filter(([, , series]) => series.length)
+      .forEach(([name, color]) => {
+        const item = document.createElement("span");
+        const swatch = document.createElement("i");
+        swatch.style.background = `var(${color})`;
+        item.append(swatch, name);
+        legend.append(item);
+      });
+
+    const meanHigh = forecast ? number(forecast.mean_high_water) : null;
+    if (meanHigh !== null) {
+      const item = document.createElement("span");
+      const swatch = document.createElement("i");
+      swatch.style.background = "var(--tide)";
+      swatch.style.height = "1px";
+      item.append(swatch, "Mittleres Hochwasser " + metres(meanHigh));
+      legend.append(item);
+    }
+    $("chart-card").hidden = false;
+    lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh };
+    drawChart(lastData);
+
+    const next = events[0];
+    $("chart").setAttribute("aria-label", "Wasserkurve der letzten 12 und nächsten 36 Stunden." +
+      (next ? " Nächstes Ereignis: " + (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + clock(next.t) + ", " + metres(next.cm) + "." : "") +
+      " Die Werte stehen auch in der Tabelle darunter.");
   }
 
   async function load() {
     const now = new Date();
     $("error").hidden = true;
+    const [measured, forecast] = await Promise.all([loadMeasurements(), loadForecast()]);
+    const events = upcomingEvents(forecast, now);
 
-    try {
-      const properties = (await getJson(BSH_URL)).properties;
-      const { lastMeasured, estimate } = currentLevel(properties.curve, now);
-      const next = showEvents(properties, now);
-
-      if (estimate !== null) {
-        $("now-label").textContent = "Jetzt, " + clock(now);
-        $("now-value").textContent = metres(estimate);
-      } else if (lastMeasured) {
-        $("now-label").textContent = "Letzte Messung, " + clock(lastMeasured.t);
-        $("now-value").textContent = metres(lastMeasured.measured);
-      } else {
-        throw new Error("Keine Werte in der Antwort");
-      }
-
-      $("trend").textContent = next
-        ? (next.event === "HW" ? "↗ Wasser steigt" : "↘ Wasser fällt") +
-          " bis " + clock(next.t)
-        : "";
-      $("measured").textContent = lastMeasured
-        ? "Zuletzt gemessen: " + metres(lastMeasured.measured) + " um " + clock(lastMeasured.t)
-        : "";
-      return;
-    } catch (bshError) {
-      console.warn("BSH nicht erreichbar:", bshError);
+    let latest = measured[measured.length - 1] || null;
+    if (!latest && forecast) {
+      const fromFile = (forecast.curve || [])
+        .filter((p) => number(p.measurement) !== null)
+        .map((p) => ({ t: parseTime(p.timestamp), v: number(p.measurement) }))
+        .sort((a, b) => a.t - b.t);
+      latest = fromFile[fromFile.length - 1] || null;
     }
 
-    try {
-      const m = await getJson(PEGEL_URL);
-      const value = number(m.value);
-      if (value === null) throw new Error("Kein Messwert");
-      $("now-label").textContent = "Letzte Messung, " + clock(parseTime(m.timestamp));
-      $("now-value").textContent = metres(value);
-      $("trend").textContent = "";
-      $("measured").textContent = "Messwert von PEGELONLINE. Die BSH-Vorhersage ist gerade nicht erreichbar.";
-      $("events-card").hidden = true;
-    } catch (pegelError) {
-      console.warn("PEGELONLINE nicht erreichbar:", pegelError);
+    if (latest) {
+      $("now-label").textContent = "Letzte Messung, " + clock(latest.t);
+      $("now-value").textContent = metres(latest.v);
+      const next = events[0];
+      const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + clock(next.t) : "";
+      const trend = trendText(measured);
+      $("trend").textContent = [trend, nextText && "Nächstes " + nextText].filter(Boolean).join(" · ");
+    } else {
       $("now-label").textContent = "Stand " + clock(now);
       $("now-value").textContent = "–";
       $("trend").textContent = "";
-      $("measured").textContent = "";
-      showError("Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.");
+      $("error").textContent = "Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.";
+      $("error").hidden = false;
     }
+
+    showChart(now, measured, forecast, events);
+    if (forecast) showEvents(forecast, events);
+    else $("events-card").hidden = true;
   }
 
   $("reload").addEventListener("click", load);
