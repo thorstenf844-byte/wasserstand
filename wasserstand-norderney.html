@@ -147,7 +147,7 @@
   const PEGEL_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/";
   const REFRESH_MS = 5 * 60 * 1000;
   // Gleiche Grenzen wie in .github/scripts/warnung.py
-  const LIMIT_HW = 590, LIMIT_NW = 340, WARN_DAYS = 3;
+  const LIMIT_HW = 580, LIMIT_NW = 340, WARN_DAYS = 3;
   const isLow = (e) => e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
   const HOUR = 3600 * 1000;
   const TZ = "Europe/Berlin";
