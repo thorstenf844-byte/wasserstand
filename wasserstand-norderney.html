@@ -9,6 +9,7 @@
     color-scheme: light;
     --bg: #eef3f5; --card: #ffffff; --text: #12262f; --muted: #557079;
     --line: #d5e0e4; --accent: #0b6a8a; --error: #a12f24;
+    --warn-bg: #fff4e0; --warn-line: #e8a33d; --warn-text: #7a4a00;
     --measured: #2a78d6; --forecast: #eb6834; --tide: #9aa9af;
   }
   @media (prefers-color-scheme: dark) {
@@ -16,6 +17,7 @@
       color-scheme: dark;
       --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
       --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+      --warn-bg: #3a2a10; --warn-line: #c98a2a; --warn-text: #ffd08a;
       --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
     }
   }
@@ -23,6 +25,7 @@
     color-scheme: dark;
     --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
     --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+    --warn-bg: #3a2a10; --warn-line: #c98a2a; --warn-text: #ffd08a;
     --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
   }
   * { box-sizing: border-box; }
@@ -76,6 +79,13 @@
   .range { display: flex; gap: 6px; margin: 0 0 10px; }
   .range button { margin-top: 0; padding: 5px 12px; font-size: .85rem; }
   .range button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 600; }
+  .warning { background: var(--warn-bg); border: 1px solid var(--warn-line); border-left-width: 5px; color: var(--warn-text); }
+  .warning h2 { color: var(--warn-text); }
+  .warning ul { margin: 6px 0 0; padding-left: 20px; }
+  .warning li { margin: 4px 0; font-weight: 600; }
+  .warning li span { font-weight: 400; }
+  .warning .note { color: var(--warn-text); opacity: .85; }
+  td.low { color: var(--warn-text); background: var(--warn-bg); font-weight: 600; }
   [hidden] { display: none; }
 </style>
 </head>
@@ -83,6 +93,12 @@
 <main>
   <h1>Pegel Norderney, Riffgat</h1>
   <div class="sub">Höhen in Metern über Pegelnull</div>
+
+  <section class="card warning" id="warning" hidden>
+    <h2>⚠ Niedriger Wasserstand erwartet</h2>
+    <ul id="warning-list"></ul>
+    <div class="note" id="warning-rule"></div>
+  </section>
 
   <section class="card" aria-live="polite">
     <div class="label" id="now-label">Daten werden geladen …</div>
@@ -130,12 +146,15 @@
   const FORECAST_URL = "https://raw.githubusercontent.com/thorstenf844-byte/wasserstand/main/norderney.json";
   const PEGEL_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/";
   const REFRESH_MS = 5 * 60 * 1000;
+  // Gleiche Grenzen wie in .github/scripts/warnung.py
+  const LIMIT_HW = 590, LIMIT_NW = 340, WARN_DAYS = 3;
+  const isLow = (e) => e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
   const HOUR = 3600 * 1000;
   const TZ = "Europe/Berlin";
 
   const $ = (id) => document.getElementById(id);
   const decimal = (cm) => (cm / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const metres = (cm) => decimal(cm) + " m";
+  const metres = (cm) => decimal(cm) + "\u00a0m";
   const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) + "\u00a0Uhr";
   const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ });
   const shortDate = (d) => {
@@ -243,6 +262,23 @@
     return stillGoing ? recent : null;
   }
 
+  function showWarning(now, events) {
+    const low = events.filter((e) => e.t - now <= WARN_DAYS * 24 * HOUR && isLow(e));
+    const list = $("warning-list");
+    list.replaceChildren();
+    low.forEach((e) => {
+      const limit = e.event === "HW" ? LIMIT_HW : LIMIT_NW;
+      const li = document.createElement("li");
+      const detail = document.createElement("span");
+      detail.textContent = " – " + Math.round(limit - e.cm) + " cm unter " + metres(limit) + " (" + e.source + ")";
+      li.append((e.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(e.t, now) + ": " + metres(e.cm), detail);
+      list.append(li);
+    });
+    $("warning-rule").textContent = "Gewarnt wird, wenn in den nächsten " + WARN_DAYS + " Tagen ein Hochwasser unter " +
+      metres(LIMIT_HW) + " oder ein Niedrigwasser unter " + metres(LIMIT_NW) + " erwartet wird.";
+    $("warning").hidden = low.length === 0;
+  }
+
   function showEvents(forecast, events) {
     const body = $("events");
     body.replaceChildren();
@@ -258,7 +294,7 @@
       row.append(timeCell);
       [
         [e.event === "HW" ? "Hoch" : "Niedrig", "kind"],
-        [metres(e.cm), "num"],
+        [(isLow(e) && e.t - Date.now() <= WARN_DAYS * 24 * HOUR ? "⚠ " : "") + metres(e.cm), isLow(e) && e.t - Date.now() <= WARN_DAYS * 24 * HOUR ? "num low" : "num"],
         [diff !== null ? (diff > 0 ? "+" : diff < 0 ? "−" : "") + Math.abs(diff) + " cm" : "–", "num"],
         [e.source, ""],
       ].forEach(([text, cls]) => {
@@ -583,6 +619,7 @@
     $("later").hidden = !later;
     $("divider").hidden = !later;
 
+    showWarning(now, events);
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
     if (forecast) showEvents(forecast, events);

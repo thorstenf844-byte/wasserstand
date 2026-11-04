@@ -32,7 +32,8 @@ Bedeutung auf der Seite:
 
 Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird ein **Hochwasser unter 5,90 m** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
 
-- Die Grenzen stehen oben in `.github/scripts/warnung.py` (`GRENZE_HOCHWASSER_CM`, `GRENZE_NIEDRIGWASSER_CM`, `TAGE_VORAUS`).
+- Dieselben Fälle zeigt die Webseite oben als gelben Warnhinweis an, und in der Tabelle sind die betroffenen Höhen markiert.
+- Die Grenzen stehen oben in `.github/scripts/warnung.py` (`GRENZE_HOCHWASSER_CM`, `GRENZE_NIEDRIGWASSER_CM`, `TAGE_VORAUS`). Bei einer Änderung auch in `wasserstand-norderney.html` anpassen (`LIMIT_HW`, `LIMIT_NW`, `WARN_DAYS`).
 - Der Name des ntfy-Kanals ist als Geheimnis `NTFY_TOPIC` hinterlegt (Einstellungen → Geheimnisse und Variablen → Actions). Er steht bewusst nicht im Repository.
 - Weitere Empfänger: einfach in der ntfy-App denselben Kanal abonnieren.
 - Test: Actions → „Wasserstandsdaten aktualisieren“ → „Run workflow“ → Haken bei „Testnachricht aufs Handy schicken“.
