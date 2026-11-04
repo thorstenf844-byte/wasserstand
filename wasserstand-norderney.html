@@ -43,6 +43,7 @@
     letter-spacing: -.02em; margin: 4px 0;
   }
   .trend { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+  .divider { border: 0; border-top: 3px solid var(--line); border-radius: 2px; margin: 14px 0 16px; }
   .later { font-size: 1.05rem; font-weight: 500; color: var(--muted); margin-top: 8px; }
   .detail { color: var(--muted); font-size: .9rem; margin-top: 8px; }
   h2 { margin: 0 0 8px; font-size: 1rem; }
@@ -87,6 +88,8 @@
     <div class="label" id="now-label">Daten werden geladen …</div>
     <div class="value" id="now-value">–</div>
     <div class="trend" id="trend"></div>
+    <hr class="divider" id="divider" hidden>
+    <div class="trend" id="next-event"></div>
     <div class="trend" id="next-level"></div>
     <div class="later" id="later" hidden>
       <div id="later-event"></div>
@@ -532,13 +535,15 @@
       const next = events[0];
       const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(next.t, now) : "";
       const trend = trendText(measured);
-      $("trend").textContent = [trend, nextText && "Nächstes " + nextText].filter(Boolean).join(" · ");
+      $("trend").textContent = trend;
+      $("next-event").textContent = nextText ? "Nächstes " + nextText : "";
       $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
     } else {
       $("now-label").textContent = "Stand " + clock(now);
       $("later").hidden = true;
       $("now-value").textContent = "–";
       $("trend").textContent = "";
+      $("next-event").textContent = "";
       $("next-level").textContent = "";
       $("error").textContent = "Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.";
       $("error").hidden = false;
@@ -550,6 +555,7 @@
       $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm);
     }
     $("later").hidden = !later;
+    $("divider").hidden = !$("next-event").textContent;
 
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
