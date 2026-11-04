@@ -55,15 +55,7 @@ def veroeffentlichen(nachricht):
 def senden(kanal, titel, text):
     nachricht = {"topic": kanal, "title": titel, "message": text, "click": SEITE, "tags": ["ocean"], "priority": 4}
     veroeffentlichen(nachricht)
-    # E-Mail-Kopien laufen über einen Nebenkanal, damit das Handy die Nachricht nicht doppelt bekommt.
-    adressen = [a.strip() for a in os.environ.get("NTFY_EMAILS", "").replace(";", ",").split(",") if a.strip()]
-    for adresse in adressen:
-        try:
-            veroeffentlichen({**nachricht, "topic": kanal + "-mail", "message": text + "\n\nAktueller Stand: " + SEITE, "email": adresse})
-            print("E-Mail verschickt an Adresse", adressen.index(adresse) + 1)
-        except Exception as fehler:
-            grund = fehler.read().decode(errors="replace") if hasattr(fehler, "read") else ""
-            print("E-Mail an Adresse", adressen.index(adresse) + 1, "fehlgeschlagen:", fehler, grund, file=sys.stderr)
+
 
 
 def main():

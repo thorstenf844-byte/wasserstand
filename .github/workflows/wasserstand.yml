@@ -37,7 +37,6 @@ jobs:
       - name: Push-Warnung prüfen
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          NTFY_EMAILS: ${{ secrets.NTFY_EMAILS }}
           TEST: ${{ inputs.test }}
         run: python3 .github/scripts/warnung.py
       - name: Datei speichern
