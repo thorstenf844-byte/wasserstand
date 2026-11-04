@@ -1,6 +1,6 @@
 # Wasserstand Norderney, Riffgat
 
-Eine kleine Webseite, die beim Öffnen den aktuellen Wasserstand am Pegel **Norderney, Riffgat** zeigt, dazu den Trend, das nächste Hoch- und Niedrigwasser mit erwartetem Pegel, eine Wasserstandskurve und eine Tabelle der kommenden Ereignisse.
+Eine kleine Webseite, die beim Öffnen den aktuellen Wasserstand am Pegel **Norderney, Riffgat** zeigt, dazu den Trend, das nächste Hoch- und Niedrigwasser mit erwartetem Pegel, eine Wasserstandskurve (umschaltbar: 2 Tage oder alle Tage der BSH-Vorhersage, etwa 6 Tage) und eine Tabelle der kommenden Ereignisse.
 
 **Live-Seite:** https://thorstenf844-byte.github.io/wasserstand/wasserstand-norderney.html
 
