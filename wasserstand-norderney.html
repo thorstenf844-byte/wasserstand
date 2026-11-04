@@ -94,7 +94,7 @@
   <section class="card" id="chart-card" hidden>
     <h2>Wasserkurve</h2>
     <div class="range" role="group" aria-label="Zeitraum">
-      <button type="button" data-range="2">2 Tage</button>
+      <button type="button" data-range="3">3 Tage</button>
       <button type="button" data-range="all">Alle Tage</button>
     </div>
     <div class="legend" id="legend"></div>
@@ -213,7 +213,7 @@
   function showEvents(forecast, events) {
     const body = $("events");
     body.replaceChildren();
-    events.slice(0, range === "all" ? events.length : 8).forEach((e) => {
+    events.filter((e) => range === "all" || e.t.getTime() <= Date.now() + 60 * HOUR).forEach((e) => {
       const mean = number(e.event === "HW" ? forecast.mean_high_water : forecast.mean_low_water);
       const diff = mean !== null ? Math.round(e.cm - mean) : null;
       const row = document.createElement("tr");
@@ -281,8 +281,8 @@
     const { now, measured, forecastLine, tide, events, meanHigh, meanLow } = data;
     const long = range === "all";
     const start = now.getTime() - 12 * HOUR;
-    const dataEnd = Math.max(...[forecastLine, tide, measured].flat().map((p) => p.t.getTime()), now.getTime() + 36 * HOUR);
-    const end = long ? dataEnd : now.getTime() + 36 * HOUR;
+    const dataEnd = Math.max(...[forecastLine, tide, measured].flat().map((p) => p.t.getTime()), now.getTime() + 60 * HOUR);
+    const end = long ? dataEnd : now.getTime() + 60 * HOUR;
     const inWindow = (p) => p.t.getTime() >= start && p.t.getTime() <= end;
 
     const values = [measured, forecastLine, tide].flat().filter(inWindow).map((p) => p.v);
@@ -316,6 +316,8 @@
         el("text", { x: lx, y: height - m.bottom + 16, "text-anchor": "middle", class: "strong" }, svg, weekday);
         el("text", { x: lx, y: height - m.bottom + 29, "text-anchor": "middle" }, svg, date);
       } else {
+        const sixHours = 6 * HOUR / (end - start) * (width - m.left - m.right);
+        if (sixHours < 34 && berlinHour(d) !== 12) continue;
         el("text", { x: px, y: height - m.bottom + 16, "text-anchor": "middle" }, svg, String(berlinHour(d)));
       }
     }
@@ -422,14 +424,14 @@
 
   let lastData = null;
   let lastForecast = null;
-  let range = "2";
+  let range = "3";
   try { if (localStorage.getItem("range") === "all") range = "all"; } catch (e) {}
   window.addEventListener("resize", () => { if (lastData) drawChart(lastData); });
 
   function chartLabel() {
     const next = lastData && lastData.events[0];
     $("chart").setAttribute("aria-label",
-      (range === "all" ? "Wasserkurve der letzten 12 Stunden und der ganzen Vorhersage." : "Wasserkurve der letzten 12 und nächsten 36 Stunden.") +
+      (range === "all" ? "Wasserkurve der letzten 12 Stunden und der ganzen Vorhersage." : "Wasserkurve der letzten 12 und nächsten 60 Stunden (3 Tage).") +
       (next ? " Nächstes Ereignis: " + (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + clock(next.t) + ", " + metres(next.cm) + "." : "") +
       " Die Werte stehen auch in der Tabelle darunter.");
   }
