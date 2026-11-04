@@ -34,6 +34,7 @@ Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage.
 
 - Die Grenzen stehen oben in `.github/scripts/warnung.py` (`GRENZE_HOCHWASSER_CM`, `GRENZE_NIEDRIGWASSER_CM`, `TAGE_VORAUS`).
 - Der Name des ntfy-Kanals ist als Geheimnis `NTFY_TOPIC` hinterlegt (Einstellungen → Geheimnisse und Variablen → Actions). Er steht bewusst nicht im Repository.
+- E-Mail-Kopien: Adressen als Geheimnis `NTFY_EMAILS` hinterlegen (mehrere durch Komma getrennt). Versand über ntfy.sh, Absender ntfy, begrenzte Anzahl pro Tag.
 - Test: Actions → „Wasserstandsdaten aktualisieren“ → „Run workflow“ → Haken bei „Testnachricht aufs Handy schicken“.
 
 ## Wie die Seite online ist
