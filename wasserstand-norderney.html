@@ -43,6 +43,7 @@
     letter-spacing: -.02em; margin: 4px 0;
   }
   .trend { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+  .later { font-size: 1.05rem; font-weight: 500; color: var(--muted); margin-top: 8px; }
   .detail { color: var(--muted); font-size: .9rem; margin-top: 8px; }
   h2 { margin: 0 0 8px; font-size: 1rem; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
@@ -87,6 +88,10 @@
     <div class="value" id="now-value">–</div>
     <div class="trend" id="trend"></div>
     <div class="trend" id="next-level"></div>
+    <div class="later" id="later" hidden>
+      <div id="later-event"></div>
+      <div id="later-level"></div>
+    </div>
     <div class="error" id="error" hidden></div>
     <button id="reload" type="button">Jetzt aktualisieren</button>
   </section>
@@ -128,14 +133,21 @@
   const $ = (id) => document.getElementById(id);
   const decimal = (cm) => (cm / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const metres = (cm) => decimal(cm) + " m";
-  const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) + " Uhr";
+  const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) + "\u00a0Uhr";
   const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ });
   const shortDate = (d) => {
     const parts = Object.fromEntries(new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ })
       .formatToParts(d).map((p) => [p.type, p.value]));
     return parts.weekday.replace(".", "") + " " + parts.day + "." + parts.month + ".";
   };
-  const parseTime =(s) => new Date(String(s).replace(" ", "T"));
+  const berlinDate = (d) => d.toLocaleDateString("de-DE", { timeZone: TZ });
+  function when(t, now) {
+    const tomorrow = new Date(now.getTime() + 24 * HOUR);
+    if (berlinDate(t) === berlinDate(now)) return clock(t);
+    if (berlinDate(t) === berlinDate(tomorrow)) return "morgen\u00a0" + clock(t);
+    return shortDate(t) + " " + clock(t);
+  }
+  const parseTime = (s) => new Date(String(s).replace(" ", "T"));
 
   function number(v) {
     if (v === "" || v === null || v === undefined) return null;
@@ -518,18 +530,26 @@
       $("now-label").textContent = "Letzte Messung, " + clock(latest.t);
       $("now-value").textContent = metres(latest.v);
       const next = events[0];
-      const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + clock(next.t) : "";
+      const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(next.t, now) : "";
       const trend = trendText(measured);
       $("trend").textContent = [trend, nextText && "Nächstes " + nextText].filter(Boolean).join(" · ");
       $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
     } else {
       $("now-label").textContent = "Stand " + clock(now);
+      $("later").hidden = true;
       $("now-value").textContent = "–";
       $("trend").textContent = "";
       $("next-level").textContent = "";
       $("error").textContent = "Die Daten konnten nicht geladen werden. Prüfe die Internetverbindung oder öffne die BSH-Seite über den Link unten.";
       $("error").hidden = false;
     }
+
+    const later = latest && events[0] ? events.find((e) => e.event !== events[0].event) : null;
+    if (later) {
+      $("later-event").textContent = "Nächstes " + (later.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(later.t, now);
+      $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm);
+    }
+    $("later").hidden = !later;
 
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
