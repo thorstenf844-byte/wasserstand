@@ -51,6 +51,7 @@
   #chart svg { display: block; width: 100%; }
   #chart text { font: 11px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--muted); font-variant-numeric: tabular-nums; }
   #chart text.strong { fill: var(--text); font-weight: 600; }
+  #chart text.ref { fill: var(--text); font-size: 10.5px; }
   #tip {
     position: absolute; top: 0; pointer-events: none; background: var(--card); color: var(--text);
     border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem;
@@ -129,7 +130,12 @@
   const metres = (cm) => decimal(cm) + " m";
   const clock = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: TZ }) + " Uhr";
   const day = (d) => d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ });
-  const parseTime = (s) => new Date(String(s).replace(" ", "T"));
+  const shortDate = (d) => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "numeric", month: "numeric", timeZone: TZ })
+      .formatToParts(d).map((p) => [p.type, p.value]));
+    return parts.weekday.replace(".", "") + " " + parts.day + "." + parts.month + ".";
+  };
+  const parseTime =(s) => new Date(String(s).replace(" ", "T"));
 
   function number(v) {
     if (v === "" || v === null || v === undefined) return null;
@@ -270,9 +276,9 @@
   function drawChart(data) {
     const box = $("chart");
     const width = Math.max(box.clientWidth, 260);
-    const height = 250;
-    const m = { top: 22, right: 8, bottom: 26, left: 30 };
-    const { now, measured, forecastLine, tide, events, meanHigh } = data;
+    const height = 262;
+    const m = { top: 22, right: 42, bottom: 38, left: 30 };
+    const { now, measured, forecastLine, tide, events, meanHigh, meanLow } = data;
     const long = range === "all";
     const start = now.getTime() - 12 * HOUR;
     const dataEnd = Math.max(...[forecastLine, tide, measured].flat().map((p) => p.t.getTime()), now.getTime() + 36 * HOUR);
@@ -282,6 +288,7 @@
     const values = [measured, forecastLine, tide].flat().filter(inWindow).map((p) => p.v);
     events.filter(inWindow).forEach((e) => values.push(e.cm));
     if (meanHigh !== null) values.push(meanHigh);
+    if (meanLow !== null) values.push(meanLow);
     const yMin = Math.floor(Math.min(...values) / 100) * 100;
     const yMax = Math.ceil(Math.max(...values) / 100) * 100;
 
@@ -303,17 +310,23 @@
       el("line", { x1: px, x2: px, y1: height - m.bottom, y2: height - m.bottom + 4, stroke: "var(--line)" }, svg);
       const midnight = berlinHour(d) === 0;
       if (long && !midnight) continue;
-      const label = midnight
-        ? d.toLocaleDateString("de-DE", { weekday: "short", timeZone: TZ })
-        : String(berlinHour(d));
-      el("text", {
-        x: px, y: height - 8, "text-anchor": "middle", class: midnight ? "strong" : "",
-      }, svg, label);
+      if (midnight) {
+        const lx = Math.min(Math.max(px, m.left + 14), width - m.right - 14);
+        const [weekday, date] = shortDate(d).split(" ");
+        el("text", { x: lx, y: height - m.bottom + 16, "text-anchor": "middle", class: "strong" }, svg, weekday);
+        el("text", { x: lx, y: height - m.bottom + 29, "text-anchor": "middle" }, svg, date);
+      } else {
+        el("text", { x: px, y: height - m.bottom + 16, "text-anchor": "middle" }, svg, String(berlinHour(d)));
+      }
     }
 
-    if (meanHigh !== null) {
-      el("line", { x1: m.left, x2: width - m.right, y1: y(meanHigh), y2: y(meanHigh), stroke: "var(--tide)", "stroke-width": 1 }, svg);
-    }
+    // Mean high and low water reference lines with direct labels
+    [[meanHigh, "MHW"], [meanLow, "MNW"]].forEach(([v, name]) => {
+      if (v === null) return;
+      el("line", { x1: m.left, x2: width - m.right + 2, y1: y(v), y2: y(v), stroke: "var(--muted)", "stroke-width": 1, opacity: 0.7 }, svg);
+      el("text", { x: width - m.right + 5, y: y(v) - 3, class: "ref strong" }, svg, name);
+      el("text", { x: width - m.right + 5, y: y(v) + 11, class: "ref" }, svg, decimal(v) + " m");
+    });
 
     const path = (series, color, w) => {
       const pts = series.filter(inWindow);
@@ -334,13 +347,13 @@
     el("text", { x: x(now), y: m.top - 10, "text-anchor": "middle", class: "strong" }, svg, "jetzt");
 
     // High and low water markers with selective labels
-    let lastLabelX = -100;
+    const lastLabelX = { HW: -100, NW: -100 };
     events.filter(inWindow).forEach((e) => {
       const px = x(e.t), py = y(e.cm);
       el("circle", { cx: px, cy: py, r: long ? 3 : 4, fill: "var(--forecast)", stroke: "var(--card)", "stroke-width": long ? 1.5 : 2 }, svg);
       if (long && e.event !== "HW") return;
-      if (px - lastLabelX < 34) return;
-      lastLabelX = px;
+      if (px - lastLabelX[e.event] < 34) return;
+      lastLabelX[e.event] = px;
       const above = e.event === "HW";
       const clampedX = Math.min(Math.max(px, m.left + 14), width - m.right - 14);
       el("text", { x: clampedX, y: above ? py - 9 : py + 17, "text-anchor": "middle", class: "strong" }, svg, decimal(e.cm));
@@ -468,16 +481,18 @@
       });
 
     const meanHigh = forecast ? number(forecast.mean_high_water) : null;
-    if (meanHigh !== null) {
+    const meanLow = forecast ? number(forecast.mean_low_water) : null;
+    [[meanHigh !== null && meanLow !== null ? meanHigh : null, "MHW / MNW = mittleres Hoch- / Niedrigwasser"]].forEach(([v, text]) => {
+      if (v === null) return;
       const item = document.createElement("span");
       const swatch = document.createElement("i");
-      swatch.style.background = "var(--tide)";
+      swatch.style.background = "var(--muted)";
       swatch.style.height = "1px";
-      item.append(swatch, "Mittleres Hochwasser " + metres(meanHigh));
+      item.append(swatch, text);
       legend.append(item);
-    }
+    });
     $("chart-card").hidden = false;
-    lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh };
+    lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh, meanLow };
     drawChart(lastData);
     chartLabel();
   }
