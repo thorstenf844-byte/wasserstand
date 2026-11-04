@@ -13,6 +13,8 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 | `wasserstand-norderney.html` | Die Webseite selbst (eine einzige Datei mit allem: Aufbau, Aussehen, Programm). |
 | `norderney.json` | Die BSH-Vorhersage, automatisch jede Stunde neu abgelegt. Nicht von Hand bearbeiten. |
 | `.github/workflows/wasserstand.yml` | Der Automatik-Ablauf, der die Vorhersage stündlich holt und speichert. |
+| `.github/scripts/warnung.py` | Prüft stündlich die Vorhersage und schickt eine Push-Warnung (siehe unten). |
+| `warnungen.json` | Merkliste, welche Ereignisse schon gemeldet wurden. Wird automatisch geschrieben. |
 | `README.md` | Diese Beschreibung. |
 
 ## Woher die Daten kommen
@@ -25,6 +27,14 @@ Bedeutung auf der Seite:
 - **Gemessen:** tatsächlich gemessener Wasserstand.
 - **Vorhersage:** BSH-Vorhersage inklusive Wetter und Wind („BSH“ oder „Modell“ in der Tabelle).
 - **Gezeiten:** reine astronomische Gezeitenvorausberechnung ohne Wetter.
+
+## Push-Warnung
+
+Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird ein **Hochwasser unter 5,90 m** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
+
+- Die Grenzen stehen oben in `.github/scripts/warnung.py` (`GRENZE_HOCHWASSER_CM`, `GRENZE_NIEDRIGWASSER_CM`, `TAGE_VORAUS`).
+- Der Name des ntfy-Kanals ist als Geheimnis `NTFY_TOPIC` hinterlegt (Einstellungen → Geheimnisse und Variablen → Actions). Er steht bewusst nicht im Repository.
+- Test: Actions → „Wasserstandsdaten aktualisieren“ → „Run workflow“ → Haken bei „Testnachricht aufs Handy schicken“.
 
 ## Wie die Seite online ist
 
