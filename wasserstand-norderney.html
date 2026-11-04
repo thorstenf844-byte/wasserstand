@@ -44,7 +44,7 @@
   }
   .trend { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
   .divider { border: 0; border-top: 3px solid var(--line); border-radius: 2px; margin: 14px 0 16px; }
-  .later { font-size: 1.05rem; font-weight: 500; color: var(--muted); margin-top: 8px; }
+  .later { font-size: 1.05rem; font-weight: 500; color: var(--muted); }
   .detail { color: var(--muted); font-size: .9rem; margin-top: 8px; }
   h2 { margin: 0 0 8px; font-size: 1rem; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
@@ -88,9 +88,9 @@
     <div class="label" id="now-label">Daten werden geladen …</div>
     <div class="value" id="now-value">–</div>
     <div class="trend" id="trend"></div>
-    <hr class="divider" id="divider" hidden>
     <div class="trend" id="next-event"></div>
     <div class="trend" id="next-level"></div>
+    <hr class="divider" id="divider" hidden>
     <div class="later" id="later" hidden>
       <div id="later-event"></div>
       <div id="later-level"></div>
@@ -555,7 +555,7 @@
       $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm);
     }
     $("later").hidden = !later;
-    $("divider").hidden = !$("next-event").textContent;
+    $("divider").hidden = !later;
 
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
