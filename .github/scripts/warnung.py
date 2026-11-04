@@ -62,7 +62,8 @@ def senden(kanal, titel, text):
             veroeffentlichen({**nachricht, "topic": kanal + "-mail", "message": text + "\n\nAktueller Stand: " + SEITE, "email": adresse})
             print("E-Mail verschickt an Adresse", adressen.index(adresse) + 1)
         except Exception as fehler:
-            print("E-Mail an Adresse", adressen.index(adresse) + 1, "fehlgeschlagen:", fehler, file=sys.stderr)
+            grund = fehler.read().decode(errors="replace") if hasattr(fehler, "read") else ""
+            print("E-Mail an Adresse", adressen.index(adresse) + 1, "fehlgeschlagen:", fehler, grund, file=sys.stderr)
 
 
 def main():
