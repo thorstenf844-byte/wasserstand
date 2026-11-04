@@ -194,16 +194,21 @@
     }
   }
 
-  function trendText(points) {
-    if (points.length < 2) return "";
+  function trendChange(points) {
+    if (points.length < 2) return null;
     const latest = points[points.length - 1];
     const target = latest.t.getTime() - 30 * 60 * 1000;
     const earlier = points
       .filter((p) => p.t.getTime() <= latest.t.getTime() - 20 * 60 * 1000 && p.t.getTime() >= target - 15 * 60 * 1000)
       .sort((a, b) => Math.abs(a.t - target) - Math.abs(b.t - target))[0];
-    if (!earlier) return "";
-    const minutes = Math.round((latest.t - earlier.t) / 60000);
-    const diff = Math.round(latest.v - earlier.v);
+    if (!earlier) return null;
+    return { minutes: Math.round((latest.t - earlier.t) / 60000), diff: Math.round(latest.v - earlier.v) };
+  }
+
+  function trendText(points) {
+    const change = trendChange(points);
+    if (!change) return "";
+    const { minutes, diff } = change;
     if (Math.abs(diff) < 2) return "→ Kaum Änderung in " + minutes + " Min.";
     if (diff > 0) return "↗ Wasser steigt: +" + diff + " cm in " + minutes + " Min.";
     return "↘ Wasser fällt: −" + Math.abs(diff) + " cm in " + minutes + " Min.";
@@ -223,6 +228,19 @@
       .map((e) => ({ ...e, t: parseTime(e.event_timestamp), ...eventValue(e) }))
       .filter((e) => e.t > now && e.cm !== null)
       .sort((a, b) => a.t - b.t);
+  }
+
+  // A forecast high (low) water whose time has passed less than 90 minutes ago
+  // while the measured water is still rising (falling) or nearly level.
+  function ongoingEvent(forecast, now, change) {
+    if (!forecast || !change) return null;
+    const recent = (forecast.high_water_low_water || [])
+      .map((e) => ({ ...e, t: parseTime(e.event_timestamp), ...eventValue(e) }))
+      .filter((e) => e.t <= now && now - e.t < 90 * 60 * 1000 && e.cm !== null)
+      .sort((a, b) => b.t - a.t)[0];
+    if (!recent) return null;
+    const stillGoing = recent.event === "HW" ? change.diff > -2 : change.diff < 2;
+    return stillGoing ? recent : null;
   }
 
   function showEvents(forecast, events) {
@@ -429,6 +447,8 @@
   $("chart").addEventListener("pointerdown", (e) => { if (chartState) showTip(pointerTime(e)); });
   $("chart").addEventListener("pointermove", (e) => { if (chartState) showTip(pointerTime(e)); });
   $("chart").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideTip(); });
+  document.addEventListener("pointerdown", (e) => { if (!$("chart").contains(e.target)) hideTip(); });
+  window.addEventListener("scroll", hideTip, { passive: true });
   $("chart").addEventListener("keydown", (e) => {
     if (!chartState || (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Escape")) return;
     e.preventDefault();
@@ -519,6 +539,7 @@
     $("error").hidden = true;
     const [measured, forecast] = await Promise.all([loadMeasurements(), loadForecast()]);
     const events = upcomingEvents(forecast, now);
+    const ongoing = ongoingEvent(forecast, now, trendChange(measured));
 
     let latest = measured[measured.length - 1] || null;
     if (!latest && forecast) {
@@ -533,11 +554,14 @@
       $("now-label").textContent = "Letzte Messung, " + clock(latest.t);
       $("now-value").textContent = metres(latest.v);
       const next = events[0];
-      const nextText = next ? (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(next.t, now) : "";
-      const trend = trendText(measured);
-      $("trend").textContent = trend;
-      $("next-event").textContent = nextText ? "Nächstes " + nextText : "";
-      $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
+      $("trend").textContent = trendText(measured);
+      if (ongoing) {
+        $("next-event").textContent = (ongoing.event === "HW" ? "Hochwasser" : "Niedrigwasser") + " jetzt";
+        $("next-level").textContent = "Vorhergesagt: " + clock(ongoing.t) + ", " + metres(ongoing.cm);
+      } else {
+        $("next-event").textContent = next ? "Nächstes " + (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(next.t, now) : "";
+        $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
+      }
     } else {
       $("now-label").textContent = "Stand " + clock(now);
       $("later").hidden = true;
@@ -549,7 +573,9 @@
       $("error").hidden = false;
     }
 
-    const later = latest && events[0] ? events.find((e) => e.event !== events[0].event) : null;
+    const later = !latest || !events[0] ? null
+      : ongoing ? events[0]
+      : events.find((e) => e.event !== events[0].event);
     if (later) {
       $("later-event").textContent = "Nächstes " + (later.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(later.t, now);
       $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm);
