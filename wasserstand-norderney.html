@@ -262,6 +262,14 @@
     return stillGoing ? recent : null;
   }
 
+  // Short signed difference to mean high/low water, e.g. " (−10 cm)"
+  function offMean(e, forecast) {
+    const mean = forecast ? number(e.event === "HW" ? forecast.mean_high_water : forecast.mean_low_water) : null;
+    if (mean === null) return "";
+    const diff = Math.round(e.cm - mean);
+    return " (" + (diff > 0 ? "+" : diff < 0 ? "−" : "±") + Math.abs(diff) + "\u00a0cm)";
+  }
+
   function meanDiff(e, forecast) {
     const mean = forecast ? number(e.event === "HW" ? forecast.mean_high_water : forecast.mean_low_water) : null;
     if (mean === null) return "";
@@ -601,10 +609,10 @@
       $("trend").textContent = trendText(measured);
       if (ongoing) {
         $("next-event").textContent = (ongoing.event === "HW" ? "Hochwasser" : "Niedrigwasser") + " jetzt";
-        $("next-level").textContent = "Vorhergesagt: " + clock(ongoing.t) + ", " + metres(ongoing.cm);
+        $("next-level").textContent = "Vorhergesagt: " + clock(ongoing.t) + ", " + metres(ongoing.cm) + offMean(ongoing, forecast);
       } else {
         $("next-event").textContent = next ? "Nächstes " + (next.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(next.t, now) : "";
-        $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) : "";
+        $("next-level").textContent = next ? "Erwarteter Pegel: " + metres(next.cm) + offMean(next, forecast) : "";
       }
     } else {
       $("now-label").textContent = "Stand " + clock(now);
@@ -622,7 +630,7 @@
       : events.find((e) => e.event !== events[0].event);
     if (later) {
       $("later-event").textContent = "Nächstes " + (later.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(later.t, now);
-      $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm);
+      $("later-level").textContent = "Erwarteter Pegel: " + metres(later.cm) + offMean(later, forecast);
     }
     $("later").hidden = !later;
     $("divider").hidden = !later;
