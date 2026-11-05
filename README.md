@@ -15,6 +15,7 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 | `.github/workflows/wasserstand.yml` | Der Automatik-Ablauf, der die Vorhersage stündlich holt und speichert. |
 | `.github/scripts/warnung.py` | Prüft stündlich die Vorhersage und schickt eine Push-Warnung (siehe unten). |
 | `warnungen.json` | Merkliste, welche Ereignisse schon gemeldet wurden. Wird automatisch geschrieben. |
+| `wind-norderney.html` | Windvorhersage Norderney (Windguru und Windfinder, in Beaufort). Live: https://thorstenf844-byte.github.io/wasserstand/wind-norderney.html |
 | `README.md` | Diese Beschreibung. |
 
 ## Woher die Daten kommen
