@@ -3,41 +3,169 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wind Norderney – Windguru & Windfinder</title>
+<meta name="theme-color" content="#0b2a45">
+<title>Wind Norderney</title>
 <style>
-  :root { --bg:#f2f6f9; --card:#fff; --text:#1d2b36; --muted:#5f7180; --accent:#0a6ea8; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-         background:var(--bg); color:var(--text); line-height:1.45; }
-  header { background:linear-gradient(135deg,#0a4f7a,#0a6ea8); color:#fff; padding:22px 16px; }
-  header h1 { margin:0; font-size:1.5rem; }
-  header p { margin:4px 0 0; opacity:.85; font-size:.95rem; }
-  main { max-width:1100px; margin:0 auto; padding:16px; }
-  section { background:var(--card); border-radius:12px; padding:16px; margin-bottom:18px;
-            box-shadow:0 1px 4px rgba(0,0,0,.08); }
-  h2 { margin:0 0 4px; font-size:1.15rem; }
-  .sub { margin:0 0 12px; color:var(--muted); font-size:.9rem; }
-  .widget { overflow-x:auto; -webkit-overflow-scrolling:touch; min-height:120px; }
-  .links { margin-top:10px; font-size:.9rem; }
-  .links a { color:var(--accent); text-decoration:none; margin-right:14px; display:inline-block; }
-  .links a:hover { text-decoration:underline; }
-  footer { text-align:center; color:var(--muted); font-size:.8rem; padding:8px 16px 24px; }
+  :root{
+    --navy:#0b2a45; --navy2:#123b5e; --bg:#eef3f7; --card:#ffffff; --text:#152433;
+    --muted:#627485; --line:#dde5ec; --accent:#0e7cc2; --radius:14px;
+    --b0:#cfe8f7; --b2:#9fd3ef; --b3:#7fd1a8; --b4:#3fb87f; --b5:#b6d43a; --b6:#f2c230;
+    --b7:#f08c2e; --b8:#e2453c; --b9:#a3289b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--bg); color:var(--text); line-height:1.4; -webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  /* Kopf */
+  header{background:linear-gradient(160deg,var(--navy),var(--navy2) 70%,#1b5a86); color:#fff;
+         padding:22px 16px 26px}
+  .hwrap{max-width:1080px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-size:1.6rem;letter-spacing:.2px}
+  header .sub{opacity:.8;font-size:.92rem;margin-top:3px}
+  .hbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);
+       padding:8px 12px;border-radius:10px;font-size:.88rem;text-decoration:none;cursor:pointer;font-family:inherit}
+  .btn:active{transform:scale(.98)}
+  main{max-width:1080px;margin:-14px auto 0;padding:0 12px 24px}
+  section{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px;
+          box-shadow:0 1px 3px rgba(10,30,50,.08)}
+  h2{font-size:1.05rem;margin:0 0 2px}
+  .hint{color:var(--muted);font-size:.84rem;margin:0 0 12px}
+  .err{color:#a33;font-size:.88rem}
+  /* Warnungen */
+  #alerts:empty{display:none}
+  .alert{border-radius:12px;padding:12px 14px;margin-bottom:10px;border-left:6px solid}
+  .alert b{display:block;margin-bottom:2px}
+  .alert small{color:#444}
+  .sev-minor{background:#fff8d6;border-color:#e6c200}
+  .sev-moderate{background:#ffe9d1;border-color:#f08c2e}
+  .sev-severe{background:#ffdcdc;border-color:#e2453c}
+  .sev-extreme{background:#f3dcf2;border-color:#a3289b}
+  .ok{background:#e7f6ee;border-left:6px solid #3fb87f;border-radius:12px;padding:10px 14px;font-size:.9rem}
+  /* Jetzt */
+  .now{display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center}
+  @media(max-width:560px){.now{grid-template-columns:130px 1fr;gap:12px}}
+  .bigbft{font-size:3rem;font-weight:700;line-height:1}
+  .bigbft span{font-size:1.1rem;font-weight:600;color:var(--muted);margin-left:4px}
+  .bftname{font-weight:600;margin:4px 0 10px}
+  .kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .kv div{background:var(--bg);border-radius:10px;padding:8px 10px}
+  .kv small{display:block;color:var(--muted);font-size:.75rem}
+  .kv strong{font-size:1rem}
+  .src{color:var(--muted);font-size:.78rem;margin-top:10px}
+  /* Tage */
+  .days{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .day{flex:0 0 132px;scroll-snap-align:start;border:2px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;
+       background:#fff;text-align:center;font-family:inherit;color:inherit}
+  .day.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,124,194,.15)}
+  .day .dn{font-weight:700}
+  .day .dd{color:var(--muted);font-size:.78rem}
+  .day .ic{font-size:1.6rem;margin:4px 0}
+  .pill{display:inline-block;border-radius:999px;padding:3px 10px;font-weight:700;font-size:.95rem;color:#102030}
+  .day .row{display:flex;justify-content:space-between;font-size:.8rem;margin-top:6px;color:var(--muted)}
+  .day .row b{color:var(--text)}
+  /* Diagramm */
+  .chartwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  svg text{font-family:inherit}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+  /* Tabellen */
+  table{border-collapse:collapse;width:100%;font-size:.88rem}
+  th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left;white-space:nowrap}
+  thead th{color:var(--muted);font-weight:600;font-size:.8rem}
+  .tscroll{overflow-x:auto}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle}
+  .g{background:#3fb87f}.y{background:#f2c230}.r{background:#e2453c}
+  .agree{font-size:.78rem;border-radius:6px;padding:2px 6px}
+  .agree.ja{background:#e7f6ee;color:#1e6b45}.agree.nein{background:#fff1d6;color:#8a5a00}
+  /* Quellen-Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:10px}
+  .tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;cursor:pointer;font-family:inherit;font-size:.9rem;color:var(--text)}
+  .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .pane{overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:100px}
+  .pane.hide{position:absolute;left:-9999px;width:1000px}
+  /* Bft-Legende */
+  .bftscale{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;font-size:.7rem;text-align:center}
+  .bftscale div{padding:6px 0;border-radius:4px;color:#102030}
+  footer{max-width:1080px;margin:0 auto;padding:4px 16px 30px;color:var(--muted);font-size:.78rem}
+  .skeleton{color:var(--muted);font-size:.9rem;padding:10px 0}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🌬️ Wind Norderney</h1>
-  <p>Vorhersage der nächsten Tage – Windguru &amp; Windfinder, Windstärke in Beaufort</p>
+  <div class="hwrap">
+    <div>
+      <h1>🌬️ Wind Norderney</h1>
+      <div class="sub" id="stand">Daten werden geladen …</div>
+    </div>
+    <div class="hbtns">
+      <button class="btn" id="reload">↻ Aktualisieren</button>
+      <a class="btn" href="wasserstand-norderney.html">🌊 Wasserstand</a>
+    </div>
+  </div>
 </header>
 
 <main>
 
-  <!-- ===== WINDGURU ===== -->
+  <!-- Unwetterwarnungen -->
   <section>
-    <h2>Windguru – Norderney</h2>
-    <p class="sub">Wind, Böen, Richtung, Wellen, Temperatur, Bewölkung, Regen · bis 10 Tage</p>
-    <div class="widget">
+    <h2>Warnungen des Deutschen Wetterdienstes</h2>
+    <p class="hint">Amtliche Warnungen für Norderney</p>
+    <div id="alerts"><div class="skeleton">Lade Warnungen …</div></div>
+  </section>
+
+  <!-- Jetzt -->
+  <section>
+    <h2>Jetzt auf Norderney</h2>
+    <p class="hint" id="nowhint">Gemessen an der Wetterstation des DWD</p>
+    <div id="now"><div class="skeleton">Lade Messwerte …</div></div>
+  </section>
+
+  <!-- 7 Tage -->
+  <section>
+    <h2>Die nächsten 7 Tage</h2>
+    <p class="hint">Tippe auf einen Tag, um unten den Stundenverlauf zu sehen. Der Wert in der Mitte ist der stärkste mittlere Wind des Tages in Beaufort.</p>
+    <div class="days" id="days"><div class="skeleton">Lade Vorhersage …</div></div>
+  </section>
+
+  <!-- Stundenverlauf -->
+  <section>
+    <h2 id="charttitle">Stundenverlauf</h2>
+    <p class="hint">Mittlerer Wind und Böen, darunter die Windrichtung. Die farbigen Bänder zeigen die Beaufort-Stufen.</p>
+    <div class="chartwrap" id="chart"></div>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>Mittlerer Wind</span>
+      <span><i style="background:#e2453c"></i>Böen</span>
+      <span>➤ Pfeil zeigt, wohin der Wind weht</span>
+    </div>
+  </section>
+
+  <!-- Aktivitäten -->
+  <section>
+    <h2>Was geht bei dem Wind?</h2>
+    <p class="hint">Einschätzung für tagsüber (9 bis 18 Uhr) aus Wind und Böen. Grün = gut, Gelb = mit Vorsicht, Rot = eher nicht. Das sind Richtwerte, keine Sicherheitsfreigabe.</p>
+    <div class="tscroll" id="activities"><div class="skeleton">…</div></div>
+  </section>
+
+  <!-- Modellvergleich -->
+  <section>
+    <h2>Wie sicher ist die Vorhersage?</h2>
+    <p class="hint">Drei Wettermodelle im Vergleich: stärkster mittlerer Wind des Tages in Beaufort, in Klammern die Böen. Liegen die Modelle eng beieinander, ist die Vorhersage zuverlässiger.</p>
+    <div class="tscroll" id="models"><div class="skeleton">…</div></div>
+  </section>
+
+  <!-- Originalquellen -->
+  <section>
+    <h2>Windguru &amp; Windfinder</h2>
+    <p class="hint">Die Original-Vorhersagen der beiden Dienste, in Beaufort</p>
+    <div class="tabs">
+      <button class="tab on" data-pane="wg">Windguru</button>
+      <button class="tab" data-pane="wf">Windfinder</button>
+    </div>
+    <div class="pane" id="pane-wg">
       <script id="wg_fwdg_20_100_norderney">
       (function (window, document) {
         var loader = function () {
@@ -55,34 +183,313 @@
       })(window, document);
       </script>
     </div>
-    <div class="links">
-      <a href="https://www.windguru.cz/20" target="_blank" rel="noopener">Norderney auf Windguru öffnen ↗</a>
+    <div class="pane hide" id="pane-wf">
+      <script src="https://www.windfinder.com/widget/forecast/js/norderney?unit_wave=m&unit_rain=mm&unit_temperature=c&unit_wind=bft&unit_pressure=hPa&days=4&show_day=1&show_pressure=0&show_waves=1&show_clouds=1"></script>
+      <noscript><a rel="nofollow" href="https://www.windfinder.com/forecast/norderney">Windvorhersage Norderney</a> von windfinder.com</noscript>
     </div>
   </section>
 
-  <!-- ===== WINDFINDER ===== -->
+  <!-- Legende -->
   <section>
-    <h2>Windfinder – Norderney</h2>
-    <p class="sub">Wind, Böen, Richtung, Wellen, Temperatur, Regen · 4 Tage</p>
-    <div class="widget">
-      <script src="https://www.windfinder.com/widget/forecast/js/norderney?unit_wave=m&unit_rain=mm&unit_temperature=c&unit_wind=bft&unit_pressure=hPa&days=4&show_day=1&show_pressure=0&show_waves=1&show_clouds=1"></script>
-      <noscript>
-        <a rel="nofollow" href="https://www.windfinder.com/forecast/norderney?utm_source=forecast&utm_medium=web&utm_campaign=homepageweather&utm_content=noscript-forecast">Windvorhersage Norderney</a>
-        bereitgestellt von <a rel="nofollow" href="https://www.windfinder.com?utm_source=forecast&utm_medium=web&utm_campaign=homepageweather&utm_content=noscript-logo">windfinder.com</a>
-      </noscript>
-    </div>
-    <div class="links">
-      <a href="https://www.windfinder.com/forecast/norderney" target="_blank" rel="noopener">Vorhersage ↗</a>
-      <a href="https://www.windfinder.com/weatherforecast/norderney" target="_blank" rel="noopener">Superforecast ↗</a>
-      <a href="https://www.windfinder.com/report/norderney" target="_blank" rel="noopener">Aktuelle Messwerte ↗</a>
-    </div>
+    <h2>Beaufort-Skala</h2>
+    <p class="hint">Farben, wie sie auf dieser Seite verwendet werden</p>
+    <div class="bftscale" id="bftscale"></div>
+    <p class="hint" style="margin-top:10px" id="bftnames"></p>
   </section>
 
 </main>
 
 <footer>
-  Daten: windguru.cz &amp; windfinder.com · Widgets werden beim Öffnen live geladen (Internetverbindung nötig).
+  Daten: Messwerte und Warnungen vom Deutschen Wetterdienst (über Bright Sky) ·
+  Vorhersage und Wellen von Open-Meteo (Modelle DWD ICON, ECMWF, NOAA GFS) ·
+  Original-Vorhersagen von windguru.cz und windfinder.com.
+  Alle Angaben ohne Gewähr.
 </footer>
 
+<script>
+(function(){
+  "use strict";
+  var LAT = 53.71, LON = 7.16;          // Norderney
+  var SEA_LAT = 53.75, SEA_LON = 7.16;  // vor dem Nordstrand (für Wellen)
+
+  // ---------- Beaufort ----------
+  var BFT_KMH = [1,6,12,20,29,39,50,62,75,89,103,118]; // Untergrenzen der Stufen 1..12
+  var BFT_NAME = ["Windstille","leiser Zug","leichte Brise","schwache Brise","mäßige Brise","frische Brise",
+                  "starker Wind","steifer Wind","stürmischer Wind","Sturm","schwerer Sturm","orkanartiger Sturm","Orkan"];
+  var BFT_COL = ["#cfe8f7","#cfe8f7","#9fd3ef","#7fd1a8","#3fb87f","#b6d43a","#f2c230","#f08c2e","#e2453c","#c42f6e","#a3289b","#7a1f8f","#4b1470"];
+  function bft(kmh){ if(kmh==null||isNaN(kmh)) return null; var b=0; for(var i=0;i<BFT_KMH.length;i++){ if(kmh>=BFT_KMH[i]) b=i+1; } return b; }
+  function pill(b){ if(b==null) return '<span class="pill" style="background:#eee">–</span>';
+    return '<span class="pill" style="background:'+BFT_COL[b]+';'+(b>=8?'color:#fff':'')+'">'+b+'</span>'; }
+
+  // ---------- Richtung ----------
+  var DIRS = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  function dirName(d){ if(d==null) return "–"; return DIRS[Math.round(((d%360)+360)%360/22.5)%16]; }
+  function arrow(deg,size,color){ // Pfeil zeigt Strömungsrichtung (aus deg → nach deg+180)
+    size=size||16; color=color||"#0b2a45";
+    return '<svg width="'+size+'" height="'+size+'" viewBox="-10 -10 20 20" style="vertical-align:middle">'+
+      '<g transform="rotate('+((deg+180)%360)+')"><path d="M0,-8 L5,4 L0,1.5 L-5,4 Z" fill="'+color+'"/></g></svg>';
+  }
+
+  // ---------- Wetter-Symbole (WMO-Codes) ----------
+  function wIcon(c){
+    if(c==null) return "·";
+    if(c===0) return "☀️"; if(c<=2) return "🌤️"; if(c===3) return "☁️";
+    if(c===45||c===48) return "🌫️"; if(c>=51&&c<=57) return "🌦️"; if(c>=61&&c<=67) return "🌧️";
+    if(c>=71&&c<=77) return "🌨️"; if(c>=80&&c<=82) return "🌧️"; if(c>=85&&c<=86) return "🌨️";
+    if(c>=95) return "⛈️"; return "☁️";
+  }
+
+  // ---------- Hilfen ----------
+  var WD = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+  function dateObj(s){ var p=s.split(/[-T:]/); return new Date(+p[0],+p[1]-1,+p[2],+(p[3]||0),+(p[4]||0)); }
+  function dayLabel(s,i){ var d=dateObj(s); if(i===0) return "Heute"; if(i===1) return "Morgen"; return WD[d.getDay()]; }
+  function dmy(s){ var d=dateObj(s); return d.getDate()+"."+(d.getMonth()+1)+"."; }
+  function hm(s){ return s.slice(11,16); }
+  function r0(x){ return x==null?"–":Math.round(x); }
+  function r1(x){ return x==null?"–":(Math.round(x*10)/10).toString().replace(".",","); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+  function getJSON(url){ return fetch(url,{cache:"no-store"}).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }); }
+  function $(id){ return document.getElementById(id); }
+
+  // ---------- URLs ----------
+  var U_FC = "https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
+    "&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,precipitation,weather_code"+
+    "&daily=wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,sunrise,sunset"+
+    "&wind_speed_unit=kmh&timezone=Europe%2FBerlin&forecast_days=7&models=icon_seamless";
+  var MODELS = [["icon_seamless","DWD ICON"],["ecmwf_ifs025","ECMWF"],["gfs_seamless","NOAA GFS"]];
+  var U_MOD = "https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
+    "&daily=wind_speed_10m_max,wind_gusts_10m_max&wind_speed_unit=kmh&timezone=Europe%2FBerlin&forecast_days=7&models="+
+    MODELS.map(function(m){return m[0];}).join(",");
+  var U_SEA = "https://marine-api.open-meteo.com/v1/marine?latitude="+SEA_LAT+"&longitude="+SEA_LON+
+    "&daily=wave_height_max&hourly=wave_height&timezone=Europe%2FBerlin&forecast_days=7";
+  var U_NOW = "https://api.brightsky.dev/current_weather?lat="+LAT+"&lon="+LON;
+  var U_ALERT = "https://api.brightsky.dev/alerts?lat="+LAT+"&lon="+LON;
+
+  var FC=null, SEA=null, selDay=0;
+
+  // ---------- Warnungen ----------
+  function renderAlerts(data){
+    var el=$("alerts"); var list=(data&&data.alerts)||[];
+    if(!list.length){ el.innerHTML='<div class="ok">✅ Zurzeit keine Warnungen für Norderney.</div>'; return; }
+    el.innerHTML=list.map(function(a){
+      var sev=(a.severity||"minor").toLowerCase();
+      var von=a.onset?new Date(a.onset):null, bis=a.expires?new Date(a.expires):null;
+      function f(d){ return d?WD[d.getDay()]+" "+d.getDate()+"."+(d.getMonth()+1)+". "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):""; }
+      return '<div class="alert sev-'+esc(sev)+'"><b>⚠️ '+esc(a.headline_de||a.event_de||"Warnung")+'</b>'+
+        '<small>'+esc(f(von))+(bis?' bis '+esc(f(bis)):'')+'</small>'+
+        (a.description_de?'<div style="margin-top:6px;font-size:.9rem">'+esc(a.description_de)+'</div>':'')+'</div>';
+    }).join("");
+  }
+
+  // ---------- Jetzt ----------
+  function compass(dir,b){
+    var col=b==null?"#0b2a45":BFT_COL[b];
+    var ticks="";
+    for(var i=0;i<16;i++){ var a=i*22.5, long=i%4===0;
+      ticks+='<line x1="0" y1="-62" x2="0" y2="'+(long?-54:-58)+'" stroke="#9fb2c3" stroke-width="'+(long?2:1)+'" transform="rotate('+a+')"/>'; }
+    var lab=[["N",0],["O",90],["S",180],["W",270]].map(function(x){
+      var rad=x[1]*Math.PI/180; return '<text x="'+(Math.sin(rad)*44)+'" y="'+(-Math.cos(rad)*44+5)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#627485">'+x[0]+'</text>'; }).join("");
+    var needle = dir==null?"":'<g transform="rotate('+((dir+180)%360)+')">'+
+      '<line x1="0" y1="30" x2="0" y2="-22" stroke="'+col+'" stroke-width="6" stroke-linecap="round"/>'+
+      '<path d="M0,-40 L11,-18 L-11,-18 Z" fill="'+col+'" stroke="#0b2a45" stroke-width="1"/></g>';
+    return '<svg viewBox="-70 -70 140 140" width="100%" style="max-width:170px">'+
+      '<circle r="66" fill="#f6f9fb" stroke="#dde5ec" stroke-width="2"/>'+ticks+lab+needle+
+      '<circle r="5" fill="#0b2a45"/></svg>';
+  }
+  function renderNow(data, fallback){
+    var w=data&&data.weather, src=data&&data.sources&&data.sources[0];
+    var speed,gust,dir,temp,when,station,fromForecast=false;
+    if(w){
+      speed=[w.wind_speed_10,w.wind_speed_30,w.wind_speed_60].find(function(x){return x!=null;});
+      gust=[w.wind_gust_speed_10,w.wind_gust_speed_30,w.wind_gust_speed_60].find(function(x){return x!=null;});
+      dir=[w.wind_direction_10,w.wind_direction_30,w.wind_direction_60].find(function(x){return x!=null;});
+      temp=w.temperature; when=w.timestamp?new Date(w.timestamp):null;
+      station=src?src.station_name:null;
+    }
+    if(speed==null && fallback){ // Ersatz: Vorhersage für die aktuelle Stunde
+      speed=fallback.speed; gust=fallback.gust; dir=fallback.dir; temp=fallback.temp; when=null; fromForecast=true;
+    }
+    if(speed==null){ $("now").innerHTML='<div class="err">Keine aktuellen Werte verfügbar.</div>'; return; }
+    var b=bft(speed), bg=bft(gust);
+    $("nowhint").textContent = fromForecast ? "Messwerte gerade nicht erreichbar – Vorhersage für diese Stunde" : "Gemessen an der Wetterstation des DWD";
+    $("now").innerHTML =
+      '<div class="now"><div>'+compass(dir,b)+'</div><div>'+
+        '<div class="bigbft">'+(b==null?"–":b)+'<span>Bft</span></div>'+
+        '<div class="bftname">'+(b==null?"":BFT_NAME[b])+' aus '+dirName(dir)+'</div>'+
+        '<div class="kv">'+
+          '<div><small>Mittelwind</small><strong>'+r0(speed)+' km/h</strong></div>'+
+          '<div><small>Böen</small><strong>'+(gust==null?"–":r0(gust)+' km/h · '+bg+' Bft')+'</strong></div>'+
+          '<div><small>Richtung</small><strong>'+dirName(dir)+(dir!=null?' ('+r0(dir)+'°)':'')+'</strong></div>'+
+          '<div><small>Temperatur</small><strong>'+(temp==null?"–":r1(temp)+' °C')+'</strong></div>'+
+        '</div>'+
+        '<div class="src">'+(fromForecast?'Quelle: Open-Meteo (DWD ICON)':
+          'Station: '+esc(station||"DWD")+(when?' · Stand '+String(when.getHours()).padStart(2,"0")+':'+String(when.getMinutes()).padStart(2,"0")+' Uhr':''))+'</div>'+
+      '</div></div>';
+  }
+
+  // ---------- Tage ----------
+  function daytimeStats(dayStr){
+    var h=FC.hourly, maxW=null,maxG=null;
+    for(var i=0;i<h.time.length;i++){
+      if(h.time[i].slice(0,10)!==dayStr) continue;
+      var hr=+h.time[i].slice(11,13); if(hr<9||hr>18) continue;
+      if(h.wind_speed_10m[i]!=null) maxW=Math.max(maxW==null?0:maxW,h.wind_speed_10m[i]);
+      if(h.wind_gusts_10m[i]!=null) maxG=Math.max(maxG==null?0:maxG,h.wind_gusts_10m[i]);
+    }
+    return {w:maxW,g:maxG};
+  }
+  function renderDays(){
+    var d=FC.daily, wave=SEA&&SEA.daily&&SEA.daily.wave_height_max;
+    $("days").innerHTML=d.time.map(function(t,i){
+      var b=bft(d.wind_speed_10m_max[i]), bg=bft(d.wind_gusts_10m_max[i]);
+      return '<button class="day'+(i===selDay?' sel':'')+'" data-i="'+i+'">'+
+        '<div class="dn">'+dayLabel(t,i)+'</div><div class="dd">'+dmy(t)+'</div>'+
+        '<div class="ic">'+wIcon(d.weather_code[i])+'</div>'+
+        pill(b)+' <span style="font-size:.8rem;color:var(--muted)">Bft</span>'+
+        '<div class="row"><span>Böen</span><b>'+(bg==null?"–":bg+' Bft')+'</b></div>'+
+        '<div class="row"><span>aus</span><b>'+arrow(d.wind_direction_10m_dominant[i],13)+' '+dirName(d.wind_direction_10m_dominant[i])+'</b></div>'+
+        '<div class="row"><span>Temp.</span><b>'+r0(d.temperature_2m_min[i])+'° / '+r0(d.temperature_2m_max[i])+'°</b></div>'+
+        '<div class="row"><span>Regen</span><b>'+r1(d.precipitation_sum[i])+' mm</b></div>'+
+        (wave&&wave[i]!=null?'<div class="row"><span>Wellen</span><b>'+r1(wave[i])+' m</b></div>':'')+
+        '<div class="row"><span>☀︎</span><b>'+hm(d.sunrise[i])+'–'+hm(d.sunset[i])+'</b></div>'+
+      '</button>';
+    }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll(".day"),function(btn){
+      btn.addEventListener("click",function(){ selDay=+btn.getAttribute("data-i"); renderDays(); renderChart(); });
+    });
+  }
+
+  // ---------- Diagramm ----------
+  function renderChart(){
+    var h=FC.hourly, dayStr=FC.daily.time[selDay], idx=[];
+    for(var i=0;i<h.time.length;i++) if(h.time[i].slice(0,10)===dayStr) idx.push(i);
+    $("charttitle").textContent="Stundenverlauf · "+dayLabel(dayStr,selDay)+", "+dmy(dayStr);
+    if(!idx.length){ $("chart").innerHTML=""; return; }
+    var W=760,H=300,L=44,R=58,T=14,B=70, pw=W-L-R, ph=H-T-B;
+    var maxV=0; idx.forEach(function(i){ maxV=Math.max(maxV,h.wind_gusts_10m[i]||0,h.wind_speed_10m[i]||0); });
+    var top=BFT_KMH.find(function(k){return k>maxV*1.08;})||130; top=Math.max(top,39);
+    function x(k){ return L+pw*k/(idx.length-1||1); }
+    function y(v){ return T+ph*(1-v/top); }
+    var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="min-width:600px">';
+    // Beaufort-Bänder
+    var edges=[0].concat(BFT_KMH);
+    for(var b=0;b<edges.length;b++){
+      var lo=edges[b], hi=edges[b+1]!=null?edges[b+1]:999; if(lo>=top) break;
+      var y1=y(Math.min(hi,top)), y2=y(lo);
+      s+='<rect x="'+L+'" y="'+y1+'" width="'+pw+'" height="'+(y2-y1)+'" fill="'+BFT_COL[b]+'" opacity=".22"/>';
+      if(y2-y1>11) s+='<text x="'+(W-R+6)+'" y="'+((y1+y2)/2+4)+'" font-size="11" fill="#627485">'+b+' Bft</text>';
+    }
+    // y-Achse (km/h)
+    for(var v=0; v<=top; v+=10){ s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="#000" stroke-opacity=".05"/>'+
+      '<text x="'+(L-6)+'" y="'+(y(v)+4)+'" font-size="10" text-anchor="end" fill="#8696a5">'+v+'</text>'; }
+    s+='<text x="10" y="'+(T+ph/2)+'" font-size="10" fill="#8696a5" transform="rotate(-90 10 '+(T+ph/2)+')" text-anchor="middle">km/h</text>';
+    // Jetzt-Linie
+    var now=new Date();
+    idx.forEach(function(i,k){ var d=dateObj(h.time[i]); if(d.getHours()===now.getHours()&&d.toDateString()===now.toDateString())
+      s+='<line x1="'+x(k)+'" x2="'+x(k)+'" y1="'+T+'" y2="'+(T+ph)+'" stroke="#0b2a45" stroke-dasharray="3 3"/><text x="'+(x(k)+4)+'" y="'+(T+10)+'" font-size="10" fill="#0b2a45">jetzt</text>'; });
+    // Flächen/Linien
+    function path(key){ return idx.map(function(i,k){ return (k?"L":"M")+x(k).toFixed(1)+","+y(h[key][i]||0).toFixed(1); }).join(""); }
+    s+='<path d="'+path("wind_speed_10m")+"L"+x(idx.length-1)+","+y(0)+"L"+x(0)+","+y(0)+'Z" fill="#0e7cc2" opacity=".12"/>';
+    s+='<path d="'+path("wind_gusts_10m")+'" fill="none" stroke="#e2453c" stroke-width="2" stroke-dasharray="5 3"/>';
+    s+='<path d="'+path("wind_speed_10m")+'" fill="none" stroke="#0e7cc2" stroke-width="3" stroke-linejoin="round"/>';
+    // Stunden + Pfeile
+    idx.forEach(function(i,k){
+      if(k%2===0){
+        s+='<text x="'+x(k)+'" y="'+(T+ph+16)+'" font-size="10" text-anchor="middle" fill="#627485">'+h.time[i].slice(11,13)+'</text>';
+        var d=h.wind_direction_10m[i], bb=bft(h.wind_speed_10m[i]);
+        if(d!=null) s+='<g transform="translate('+x(k)+','+(T+ph+36)+') rotate('+((d+180)%360)+')"><path d="M0,-9 L6,5 L0,2 L-6,5 Z" fill="'+(bb>=6?BFT_COL[bb]:"#0b2a45")+'"/></g>';
+        if(k%4===0 && h.wind_speed_10m[i]!=null) s+='<text x="'+x(k)+'" y="'+(T+ph+62)+'" font-size="10" text-anchor="middle" fill="#152433" font-weight="600">'+bb+'</text>';
+      }
+    });
+    s+='<text x="'+(L-6)+'" y="'+(T+ph+62)+'" font-size="9" text-anchor="end" fill="#8696a5">Bft</text>';
+    s+='</svg>';
+    $("chart").innerHTML=s;
+  }
+
+  // ---------- Aktivitäten ----------
+  var ACTS = [
+    ["🚲 Radfahren", function(b,g){ return (b<=3&&g<=5)?"g":(b<=5&&g<=7)?"y":"r"; }],
+    ["🚶 Strandspaziergang", function(b,g){ return (b<=5&&g<=7)?"g":(b<=7&&g<=8)?"y":"r"; }],
+    ["⛵ Segeln", function(b,g){ return (b>=2&&b<=4&&g<=6)?"g":(b>=1&&b<=5&&g<=7)?"y":"r"; }],
+    ["🪁 Kitesurfen", function(b,g){ return (b>=4&&b<=6&&g<=7)?"g":(b>=3&&b<=7&&g<=8)?"y":"r"; }],
+    ["🏄 Windsurfen", function(b,g){ return (b>=4&&b<=6&&g<=7)?"g":(b>=3&&b<=7&&g<=8)?"y":"r"; }],
+    ["🎣 Angeln vom Ufer", function(b,g){ return (b<=4&&g<=6)?"g":(b<=6&&g<=7)?"y":"r"; }]
+  ];
+  function renderActivities(){
+    var days=FC.daily.time, stats=days.map(function(t){ var s=daytimeStats(t); return {b:bft(s.w),g:bft(s.g)}; });
+    var html='<table><thead><tr><th></th>'+days.map(function(t,i){return '<th>'+dayLabel(t,i)+'<br><span style="font-weight:400">'+dmy(t)+'</span></th>';}).join("")+'</tr></thead><tbody>';
+    html+='<tr><td><small style="color:var(--muted)">Wind tagsüber</small></td>'+stats.map(function(s){return '<td>'+pill(s.b)+'</td>';}).join("")+'</tr>';
+    ACTS.forEach(function(a){
+      html+='<tr><td>'+a[0]+'</td>'+stats.map(function(s){
+        if(s.b==null) return '<td>–</td>';
+        var c=a[1](s.b,s.g==null?s.b:s.g); return '<td><span class="dot '+c+'" title="'+{g:"gut",y:"mit Vorsicht",r:"eher nicht"}[c]+'"></span></td>';
+      }).join("")+'</tr>';
+    });
+    $("activities").innerHTML=html+'</tbody></table>';
+  }
+
+  // ---------- Modellvergleich ----------
+  function renderModels(data){
+    var d=data&&data.daily; if(!d){ $("models").innerHTML='<div class="err">Modellvergleich gerade nicht verfügbar.</div>'; return; }
+    var html='<table><thead><tr><th>Modell</th>'+d.time.map(function(t,i){return '<th>'+dayLabel(t,i)+'</th>';}).join("")+'</tr></thead><tbody>';
+    var perDay=d.time.map(function(){return [];});
+    MODELS.forEach(function(m){
+      var w=d["wind_speed_10m_max_"+m[0]], g=d["wind_gusts_10m_max_"+m[0]];
+      if(!w) return;
+      html+='<tr><td>'+m[1]+'</td>'+d.time.map(function(t,i){
+        var b=bft(w[i]), bg=g?bft(g[i]):null; if(b!=null) perDay[i].push(b);
+        return '<td>'+pill(b)+(bg!=null?' <small style="color:var(--muted)">('+bg+')</small>':'')+'</td>';
+      }).join("")+'</tr>';
+    });
+    html+='<tr><td><b>Einig?</b></td>'+perDay.map(function(arr){
+      if(arr.length<2) return '<td>–</td>';
+      var sp=Math.max.apply(null,arr)-Math.min.apply(null,arr);
+      return '<td><span class="agree '+(sp<=1?'ja">✓ ja':'nein">± '+sp+' Bft')+'</span></td>';
+    }).join("")+'</tr>';
+    $("models").innerHTML=html+'</tbody></table>';
+  }
+
+  // ---------- Beaufort-Legende ----------
+  $("bftscale").innerHTML=BFT_COL.map(function(c,i){return '<div style="background:'+c+';'+(i>=8?'color:#fff':'')+'">'+i+'</div>';}).join("");
+  $("bftnames").innerHTML=BFT_NAME.map(function(n,i){ var lo=i===0?0:BFT_KMH[i-1], hi=BFT_KMH[i];
+    return '<b>'+i+'</b> '+n+' ('+(hi?lo+'–'+(hi-1):'ab '+lo)+' km/h)'; }).join(" · ");
+
+  // ---------- Quellen-Tabs ----------
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
+    t.addEventListener("click",function(){
+      Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x===t);});
+      $("pane-wg").classList.toggle("hide",t.getAttribute("data-pane")!=="wg");
+      $("pane-wf").classList.toggle("hide",t.getAttribute("data-pane")!=="wf");
+    });
+  });
+
+  // ---------- Laden ----------
+  function load(){
+    $("stand").textContent="Daten werden geladen …";
+    var pFC=getJSON(U_FC), pSEA=getJSON(U_SEA).catch(function(){return null;});
+    Promise.all([pFC,pSEA]).then(function(r){
+      FC=r[0]; SEA=r[1];
+      renderDays(); renderChart(); renderActivities();
+      var n=new Date();
+      $("stand").textContent="Stand: "+WD[n.getDay()]+" "+n.getDate()+"."+(n.getMonth()+1)+"., "+String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0")+" Uhr";
+    }).catch(function(e){
+      $("days").innerHTML='<div class="err">Vorhersage konnte nicht geladen werden ('+esc(e.message)+'). Bitte später „Aktualisieren“ tippen.</div>';
+      $("stand").textContent="Fehler beim Laden";
+    });
+    // Jetzt (mit Ersatz aus der Vorhersage)
+    Promise.all([getJSON(U_NOW).catch(function(){return null;}), pFC.catch(function(){return null;})]).then(function(r){
+      var fb=null, fc=r[1];
+      if(fc){ var n=new Date(), key=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")+"T"+String(n.getHours()).padStart(2,"0")+":00";
+        var i=fc.hourly.time.indexOf(key);
+        if(i>=0) fb={speed:fc.hourly.wind_speed_10m[i],gust:fc.hourly.wind_gusts_10m[i],dir:fc.hourly.wind_direction_10m[i],temp:fc.hourly.temperature_2m[i]}; }
+      renderNow(r[0],fb);
+    });
+    getJSON(U_ALERT).then(renderAlerts).catch(function(){ $("alerts").innerHTML='<div class="err">Warnungen gerade nicht abrufbar.</div>'; });
+    getJSON(U_MOD).then(renderModels).catch(function(){ renderModels(null); });
+  }
+  $("reload").addEventListener("click",load);
+  load();
+})();
+</script>
 </body>
 </html>
