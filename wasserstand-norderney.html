@@ -262,15 +262,23 @@
     return stillGoing ? recent : null;
   }
 
-  function showWarning(now, events) {
+  function meanDiff(e, forecast) {
+    const mean = forecast ? number(e.event === "HW" ? forecast.mean_high_water : forecast.mean_low_water) : null;
+    if (mean === null) return "";
+    const diff = Math.round(e.cm - mean);
+    const name = e.event === "HW" ? "MHW" : "MNW";
+    return diff === 0 ? "genau " + name : Math.abs(diff) + " cm " + (diff < 0 ? "unter " : "über ") + name + " (" + metres(mean) + ")";
+  }
+
+  function showWarning(now, events, forecast) {
     const low = events.filter((e) => e.t - now <= WARN_DAYS * 24 * HOUR && isLow(e));
     const list = $("warning-list");
     list.replaceChildren();
     low.forEach((e) => {
-      const limit = e.event === "HW" ? LIMIT_HW : LIMIT_NW;
       const li = document.createElement("li");
       const detail = document.createElement("span");
-      detail.textContent = " – " + Math.round(limit - e.cm) + " cm unter " + metres(limit) + " (" + e.source + ")";
+      const diff = meanDiff(e, forecast);
+      detail.textContent = (diff ? " – " + diff : "") + " · " + e.source;
       li.append((e.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(e.t, now) + ": " + metres(e.cm), detail);
       list.append(li);
     });
@@ -619,7 +627,7 @@
     $("later").hidden = !later;
     $("divider").hidden = !later;
 
-    showWarning(now, events);
+    showWarning(now, events, forecast);
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
     if (forecast) showEvents(forecast, events);

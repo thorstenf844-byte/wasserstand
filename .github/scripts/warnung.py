@@ -94,7 +94,12 @@ def main():
         if schluessel in gemeldet:
             continue
         gemeldet[schluessel] = cm
-        neu.append(f"{'Hochwasser' if hoch else 'Niedrigwasser'} {zeit(t)}: {meter(cm)} ({quelle})")
+        mittel = zahl(vorhersage.get("mean_high_water" if hoch else "mean_low_water"))
+        abstand = ""
+        if mittel is not None:
+            d = round(cm - mittel)
+            abstand = f"{abs(d)} cm {'unter' if d < 0 else 'über'} {'MHW' if hoch else 'MNW'}, " if d else f"genau {'MHW' if hoch else 'MNW'}, "
+        neu.append(f"{'Hochwasser' if hoch else 'Niedrigwasser'} {zeit(t)}: {meter(cm)} ({abstand}{quelle})")
 
     # Vergangene Ereignisse aus der Liste entfernen
     gemeldet = {k: v for k, v in gemeldet.items()
