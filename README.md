@@ -16,6 +16,8 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 | `.github/scripts/warnung.py` | Prüft stündlich die Vorhersage und schickt eine Push-Warnung (siehe unten). |
 | `warnungen.json` | Merkliste, welche Ereignisse schon gemeldet wurden. Wird automatisch geschrieben. |
 | `wind-norderney.html` | Wind-Dashboard Norderney: DWD-Messwerte und Warnungen, 7-Tage-Vorhersage in Beaufort, Stundenverlauf, Aktivitäten-Ampel, Modellvergleich, dazu Windguru und Windfinder. Live: https://thorstenf844-byte.github.io/wasserstand/wind-norderney.html |
+| `windguru.json` | Windguru-Vorhersage für Norderney (Spot 20), automatisch jede Stunde neu abgelegt. Nicht von Hand bearbeiten. |
+| `.github/workflows/windguru.yml` + `.github/scripts/windguru.py` | Holt die Windguru-Daten stündlich (Minute 41). Hinweis: Windguru erlaubt automatische Abrufe laut Nutzungsbedingungen nicht; bewusst so entschieden, für eine private Seite. Bei einer Sperre bleibt die alte Datei liegen und die Seite zeigt einen Hinweis. Abschalten: Actions → „Windguru-Daten aktualisieren“ → „Disable workflow“. |
 | `README.md` | Diese Beschreibung. |
 
 ## Woher die Daten kommen

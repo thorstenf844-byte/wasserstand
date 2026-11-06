@@ -89,6 +89,21 @@
   /* Bft-Legende */
   .bftscale{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;font-size:.7rem;text-align:center}
   .bftscale div{padding:6px 0;border-radius:4px;color:#102030}
+  /* Windguru-Tabelle */
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:.85rem;color:var(--text)}
+  .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .wgwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:10px}
+  table.wg{border-collapse:separate;border-spacing:0;font-size:.8rem;width:auto}
+  table.wg th,table.wg td{padding:5px 0;min-width:34px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.wg th:first-child,table.wg td:first-child{position:sticky;left:0;background:#fff;z-index:1;text-align:left;padding:5px 8px;min-width:78px;
+       color:var(--muted);font-weight:600;box-shadow:1px 0 0 var(--line)}
+  table.wg tr.dayrow th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding-left:6px}
+  table.wg tr.dayrow th:first-child{background:var(--navy);color:#fff}
+  table.wg td.newday,table.wg th.newday{border-left:2px solid var(--navy)}
+  table.wg td.b{font-weight:700}
+  .wgmeta{color:var(--muted);font-size:.8rem;margin-top:8px}
+  .warnbox{background:#fff1d6;border-radius:10px;padding:8px 12px;font-size:.85rem;margin-bottom:10px}
   footer{max-width:1080px;margin:0 auto;padding:4px 16px 30px;color:var(--muted);font-size:.78rem}
   .skeleton{color:var(--muted);font-size:.9rem;padding:10px 0}
 </style>
@@ -131,6 +146,13 @@
     <div class="days" id="days"><div class="skeleton">Lade Vorhersage …</div></div>
   </section>
 
+  <!-- Windguru -->
+  <section>
+    <h2>Windguru · Norderney</h2>
+    <p class="hint">Die Windguru-Vorhersage im Detail, alle 2 Stunden. Wind und Böen in Beaufort. Nach rechts wischen für die nächsten Tage.</p>
+    <div id="wg"><div class="skeleton">Lade Windguru-Daten …</div></div>
+  </section>
+
   <!-- Stundenverlauf -->
   <section>
     <h2 id="charttitle">Stundenverlauf</h2>
@@ -139,6 +161,7 @@
     <div class="legend">
       <span><i style="background:var(--accent)"></i>Mittlerer Wind</span>
       <span><i style="background:#e2453c"></i>Böen</span>
+      <span id="wglegend" style="display:none"><i style="background:#1f9d55"></i>Windguru (<span id="wglegname"></span>)</span>
       <span>➤ Pfeil zeigt, wohin der Wind weht</span>
     </div>
   </section>
@@ -159,8 +182,8 @@
 
   <!-- Originalquellen -->
   <section>
-    <h2>Windguru &amp; Windfinder</h2>
-    <p class="hint">Die Original-Vorhersagen der beiden Dienste, in Beaufort</p>
+    <h2>Original-Ansichten</h2>
+    <p class="hint">Die Vorhersagen so, wie Windguru und Windfinder sie selbst anzeigen, in Beaufort</p>
     <div class="tabs">
       <button class="tab on" data-pane="wg">Windguru</button>
       <button class="tab" data-pane="wf">Windfinder</button>
@@ -202,7 +225,7 @@
 <footer>
   Daten: Messwerte und Warnungen vom Deutschen Wetterdienst (über Bright Sky) ·
   Vorhersage und Wellen von Open-Meteo (Modelle DWD ICON, ECMWF, NOAA GFS) ·
-  Original-Vorhersagen von windguru.cz und windfinder.com.
+  Windguru-Daten von windguru.cz (stündlich abgerufen), Original-Ansichten von windguru.cz und windfinder.com.
   Alle Angaben ohne Gewähr.
 </footer>
 
@@ -265,7 +288,12 @@
   var U_NOW = "https://api.brightsky.dev/current_weather?lat="+LAT+"&lon="+LON;
   var U_ALERT = "https://api.brightsky.dev/alerts?lat="+LAT+"&lon="+LON;
 
-  var FC=null, SEA=null, selDay=0;
+  var FC=null, SEA=null, selDay=0, WG=null, wgSel=0, MODDATA=null;
+  var KN=1.852;
+  function wgDate(s){ return new Date(s.length===17? s.replace("Z",":00Z") : s); }
+  function localKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  function wgWindModels(){ return WG? WG.modelle.filter(function(m){return m.wind_kn;}) : []; }
+  function wgWaveModel(){ if(!WG) return null; var w=WG.modelle.filter(function(m){return m.wellen_m && !m.wind_kn;}); return w[0]||WG.modelle.find(function(m){return m.wellen_m;})||null; }
 
   // ---------- Warnungen ----------
   function renderAlerts(data){
@@ -367,6 +395,7 @@
     if(!idx.length){ $("chart").innerHTML=""; return; }
     var W=760,H=300,L=44,R=58,T=14,B=70, pw=W-L-R, ph=H-T-B;
     var maxV=0; idx.forEach(function(i){ maxV=Math.max(maxV,h.wind_gusts_10m[i]||0,h.wind_speed_10m[i]||0); });
+    var wmx=wgWindModels()[wgSel]; if(wmx) wmx.zeiten.forEach(function(z,j){ if(localKey(wgDate(z))===dayStr && wmx.wind_kn[j]!=null) maxV=Math.max(maxV,wmx.wind_kn[j]*KN); });
     var top=BFT_KMH.find(function(k){return k>maxV*1.08;})||130; top=Math.max(top,39);
     function x(k){ return L+pw*k/(idx.length-1||1); }
     function y(v){ return T+ph*(1-v/top); }
@@ -392,6 +421,13 @@
     s+='<path d="'+path("wind_speed_10m")+"L"+x(idx.length-1)+","+y(0)+"L"+x(0)+","+y(0)+'Z" fill="#0e7cc2" opacity=".12"/>';
     s+='<path d="'+path("wind_gusts_10m")+'" fill="none" stroke="#e2453c" stroke-width="2" stroke-dasharray="5 3"/>';
     s+='<path d="'+path("wind_speed_10m")+'" fill="none" stroke="#0e7cc2" stroke-width="3" stroke-linejoin="round"/>';
+    var wm=wgWindModels()[wgSel];
+    if(wm){
+      var map={}; wm.zeiten.forEach(function(z,j){ var d=wgDate(z); map[localKey(d)+"T"+String(d.getHours()).padStart(2,"0")]=wm.wind_kn[j]; });
+      var pts=[]; idx.forEach(function(i,k){ var v=map[h.time[i].slice(0,13)]; if(v!=null) pts.push([x(k),y(v*KN)]); });
+      if(pts.length>1) s+='<path d="'+pts.map(function(p,k){return (k?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1);}).join("")+'" fill="none" stroke="#1f9d55" stroke-width="2.5" stroke-dasharray="1 4" stroke-linecap="round"/>';
+      $("wglegend").style.display=""; $("wglegname").textContent=wm.name;
+    }
     // Stunden + Pfeile
     idx.forEach(function(i,k){
       if(k%2===0){
@@ -430,6 +466,7 @@
 
   // ---------- Modellvergleich ----------
   function renderModels(data){
+    if(data!==undefined) MODDATA=data; data=MODDATA;
     var d=data&&data.daily; if(!d){ $("models").innerHTML='<div class="err">Modellvergleich gerade nicht verfügbar.</div>'; return; }
     var html='<table><thead><tr><th>Modell</th>'+d.time.map(function(t,i){return '<th>'+dayLabel(t,i)+'</th>';}).join("")+'</tr></thead><tbody>';
     var perDay=d.time.map(function(){return [];});
@@ -441,12 +478,76 @@
         return '<td>'+pill(b)+(bg!=null?' <small style="color:var(--muted)">('+bg+')</small>':'')+'</td>';
       }).join("")+'</tr>';
     });
+    wgWindModels().forEach(function(m){
+      var mx={}, gx={};
+      m.zeiten.forEach(function(z,j){ var k=localKey(wgDate(z));
+        if(m.wind_kn[j]!=null) mx[k]=Math.max(mx[k]||0,m.wind_kn[j]);
+        if(m.boeen_kn&&m.boeen_kn[j]!=null) gx[k]=Math.max(gx[k]||0,m.boeen_kn[j]); });
+      html+='<tr><td>Windguru<br><small style="color:var(--muted)">'+esc(m.name)+'</small></td>'+d.time.map(function(t,i){
+        if(mx[t]==null) return '<td>–</td>';
+        var b=bft(mx[t]*KN), bg=gx[t]!=null?bft(gx[t]*KN):null; perDay[i].push(b);
+        return '<td>'+pill(b)+(bg!=null?' <small style="color:var(--muted)">('+bg+')</small>':'')+'</td>';
+      }).join("")+'</tr>';
+    });
     html+='<tr><td><b>Einig?</b></td>'+perDay.map(function(arr){
       if(arr.length<2) return '<td>–</td>';
       var sp=Math.max.apply(null,arr)-Math.min.apply(null,arr);
       return '<td><span class="agree '+(sp<=1?'ja">✓ ja':'nein">± '+sp+' Bft')+'</span></td>';
     }).join("")+'</tr>';
     $("models").innerHTML=html+'</tbody></table>';
+  }
+
+  // ---------- Windguru-Tabelle ----------
+  function cellB(kn,nd){ nd=nd?" newday":""; if(kn==null) return '<td class="'+nd+'">·</td>'; var b=bft(kn*KN);
+    return '<td class="b'+nd+'" style="background:'+BFT_COL[b]+';'+(b>=8?'color:#fff':'')+'">'+b+'</td>'; }
+  function tempCol(t){ if(t==null) return ""; var c=t<0?"#5b8fd9":t<8?"#8fb8e8":t<15?"#bfe3c6":t<22?"#f7e08a":"#f4a261"; return "background:"+c; }
+  function renderWG(){
+    var models=wgWindModels(), el=$("wg");
+    if(!models.length){ el.innerHTML='<div class="err">Keine Windguru-Winddaten vorhanden.</div>'; return; }
+    if(wgSel>=models.length) wgSel=0;
+    var m=models[wgSel], wave=wgWaveModel(), wmap={};
+    if(wave) wave.zeiten.forEach(function(z,j){ wmap[z]=j; });
+    var now=Date.now(), cols=[];
+    m.zeiten.forEach(function(z,j){ var d=wgDate(z); if(d.getTime()<now-3600e3) return; if(d.getHours()%2!==0) return; cols.push(j); });
+    var age=(now-wgDate(WG.abgerufen).getTime())/3600e3;
+    var html='';
+    if(age>6) html+='<div class="warnbox">⚠️ Die Windguru-Daten sind '+Math.round(age)+' Stunden alt. Der automatische Abruf hat zuletzt nicht geklappt.</div>';
+    html+='<div class="chips">'+models.map(function(x,i){return '<button class="chip'+(i===wgSel?' on':'')+'" data-i="'+i+'">'+esc(x.name)+'</button>';}).join("")+'</div>';
+    // Kopfzeilen
+    var dayRow='<tr class="dayrow"><th></th>', hourRow='<tr><th>Uhrzeit</th>', last=null, span=0, spans=[];
+    cols.forEach(function(j){ var d=wgDate(m.zeiten[j]), k=localKey(d); if(k!==last){ if(last) spans.push([last,span]); last=k; span=0; } span++; });
+    if(last) spans.push([last,span]);
+    var todayK=localKey(new Date()), tmr=new Date(); tmr.setDate(tmr.getDate()+1); var tmrK=localKey(tmr);
+    spans.forEach(function(sp,i){ var d=dateObj(sp[0]+"T00:00");
+      var lab=sp[0]===todayK?"Heute":sp[0]===tmrK?"Morgen":WD[d.getDay()];
+      dayRow+='<th colspan="'+sp[1]+'"'+(i?' class="newday"':'')+'>'+lab+' '+d.getDate()+'.'+(d.getMonth()+1)+'.</th>'; });
+    dayRow+='</tr>';
+    var rows={w:'<tr><th>Wind Bft</th>',g:'<tr><th>Böen Bft</th>',k:'<tr><th>Wind kn</th>',d:'<tr><th>Richtung</th>',t:'<tr><th>Temp. °C</th>',r:'<tr><th>Regen mm</th>',c:'<tr><th>Wolken %</th>',wv:'<tr><th>Wellen m</th>'};
+    var prevK=null;
+    cols.forEach(function(j,ci){
+      var d=wgDate(m.zeiten[j]), k=localKey(d), nd=(prevK!==null&&k!==prevK)?' class="newday"':''; prevK=k;
+      function td(inner,style){ return '<td'+nd+(style?' style="'+style+'"':'')+'>'+inner+'</td>'; }
+      hourRow+='<th'+nd+'>'+String(d.getHours()).padStart(2,"0")+'</th>';
+      rows.w+=cellB(m.wind_kn[j],nd);
+      rows.g+=m.boeen_kn?cellB(m.boeen_kn[j],nd):td("·");
+      rows.k+=td(m.wind_kn[j]==null?"·":Math.round(m.wind_kn[j])+(m.boeen_kn&&m.boeen_kn[j]!=null?'<br><small style="color:var(--muted)">'+Math.round(m.boeen_kn[j])+'</small>':''));
+      rows.d+=td(m.richtung&&m.richtung[j]!=null?arrow(m.richtung[j],16)+'<br><small>'+dirName(m.richtung[j])+'</small>':"·");
+      rows.t+=td(m.temp&&m.temp[j]!=null?Math.round(m.temp[j]):"·", m.temp?tempCol(m.temp[j]):"");
+      var rr=m.regen_mm?m.regen_mm[j]:null; rows.r+=td(rr==null||rr<0.1?"":r1(rr), rr>=0.1?"background:rgba(14,124,194,"+Math.min(.15+rr/4,.7)+");color:"+(rr>2?"#fff":"inherit"):"");
+      var cc=m.wolken?m.wolken[j]:null; rows.c+=td(cc==null?"":Math.round(cc), cc!=null?"background:rgba(98,116,133,"+(cc/100*.45)+")":"");
+      var wj=wave?wmap[m.zeiten[j]]:undefined, wh=(wj!==undefined&&wave.wellen_m)?wave.wellen_m[wj]:(m.wellen_m?m.wellen_m[j]:null);
+      rows.wv+=td(wh==null?"·":r1(wh));
+    });
+    html+='<div class="wgwrap"><table class="wg"><thead>'+dayRow+hourRow+'</tr></thead><tbody>'+
+      rows.w+'</tr>'+rows.g+'</tr>'+rows.k+'</tr>'+rows.d+'</tr>'+rows.t+'</tr>'+rows.r+'</tr>'+rows.c+'</tr>'+
+      (wave||m.wellen_m?rows.wv+'</tr>':'')+'</tbody></table></div>';
+    var ab=wgDate(WG.abgerufen);
+    html+='<div class="wgmeta">Modell: '+esc(m.langname||m.name)+' · Modelllauf '+esc((m.lauf||"").slice(0,16))+' UTC'+
+      (wave&&wave!==m?' · Wellen: '+esc(wave.name):'')+' · abgerufen '+String(ab.getHours()).padStart(2,"0")+':'+String(ab.getMinutes()).padStart(2,"0")+' Uhr · Quelle: windguru.cz</div>';
+    el.innerHTML=html;
+    Array.prototype.forEach.call(el.querySelectorAll(".chip"),function(b){
+      b.addEventListener("click",function(){ wgSel=+b.getAttribute("data-i"); renderWG(); if(FC) renderChart(); });
+    });
   }
 
   // ---------- Beaufort-Legende ----------
@@ -486,6 +587,8 @@
     });
     getJSON(U_ALERT).then(renderAlerts).catch(function(){ $("alerts").innerHTML='<div class="err">Warnungen gerade nicht abrufbar.</div>'; });
     getJSON(U_MOD).then(renderModels).catch(function(){ renderModels(null); });
+    getJSON("windguru.json?t="+Date.now()).then(function(d){ WG=d; wgSel=0; renderWG(); if(FC) renderChart(); if(MODDATA!==null) renderModels(); })
+      .catch(function(){ $("wg").innerHTML='<div class="err">Windguru-Daten gerade nicht verfügbar. Unten bei „Original-Ansichten“ gibt es das Windguru-Widget.</div>'; });
   }
   $("reload").addEventListener("click",load);
   load();
