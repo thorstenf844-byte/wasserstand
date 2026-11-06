@@ -22,7 +22,7 @@ ZIEL = os.environ.get("WG_ZIEL", "windguru.json")
 # Bevorzugte Reihenfolge (Windguru-Modellnummern). Was der Spot nicht hat, fällt weg.
 # 3 = GFS 13 km, 45 = ICON 13 km, 117 = ECMWF, 64/86 = ICON 7 km / ICON-D2, 101/106 = AROME/HARMONIE,
 # 84 = GWAM (Wellen), 85 = EWAM (Wellen)
-BEVORZUGT = [3, 45, 117, 64, 86, 101, 106, 59, 84, 85]
+BEVORZUGT = [45, 3, 117, 64, 86, 101, 106, 59, 84, 85]
 
 session = requests.Session(impersonate="chrome")
 
@@ -98,9 +98,15 @@ def main():
     spot, modelle = modell_liste()
     print("Modelle am Spot:", modelle)
     ergebnis = []
+    extra = 0
     for mid in modelle:
-        if len(ergebnis) >= MAX_MODELLE:
-            break
+        hat_wind = sum(1 for m in ergebnis if "wind_kn" in m)
+        hat_wellen = any("wellen_m" in m for m in ergebnis)
+        if hat_wind >= MAX_MODELLE:
+            # genug Windmodelle: höchstens noch 3 Versuche, ein Wellenmodell zu finden
+            if hat_wellen or extra >= 3:
+                break
+            extra += 1
         time.sleep(PAUSE_S)
         try:
             fc = hole({"q": "forecast", "id_spot": SPOT, "id_model": mid}, f"https://www.windguru.cz/{SPOT}")
@@ -110,6 +116,8 @@ def main():
                 break       # gesperrt oder zu viele Abrufe: sofort aufhören
             continue
         m = umwandeln(fc)
+        if m and "wind_kn" in m and sum(1 for x in ergebnis if "wind_kn" in x) >= MAX_MODELLE:
+            continue    # nur noch Wellenmodelle gesucht
         if m:
             ergebnis.append(m)
             print(f"Modell {mid}: {m['name']} · Lauf {m['lauf']} · {len(m['zeiten'])} Stunden")
@@ -123,6 +131,7 @@ def main():
         "spot": {"id": SPOT, "name": spot.get("spotname") or "Norderney",
                  "lat": spot.get("lat"), "lon": spot.get("lon")},
         "einheiten": {"wind": "kn", "temp": "°C", "regen": "mm/h", "wellen": "m"},
+        "modelle_am_spot": modelle,
         "modelle": ergebnis,
     }
     with open(ZIEL + ".tmp", "w", encoding="utf-8") as fh:

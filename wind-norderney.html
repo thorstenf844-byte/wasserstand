@@ -149,7 +149,7 @@
   <!-- Windguru -->
   <section>
     <h2>Windguru · Norderney</h2>
-    <p class="hint">Die Windguru-Vorhersage im Detail, alle 2 Stunden. Wind und Böen in Beaufort. Nach rechts wischen für die nächsten Tage.</p>
+    <p class="hint">Die Windguru-Vorhersage im Detail, alle 2 bis 3 Stunden. Wind und Böen in Beaufort. Oben das Wettermodell wählen, nach rechts wischen für die nächsten Tage.</p>
     <div id="wg"><div class="skeleton">Lade Windguru-Daten …</div></div>
   </section>
 
@@ -508,7 +508,9 @@
     var m=models[wgSel], wave=wgWaveModel(), wmap={};
     if(wave) wave.zeiten.forEach(function(z,j){ wmap[z]=j; });
     var now=Date.now(), cols=[];
-    m.zeiten.forEach(function(z,j){ var d=wgDate(z); if(d.getTime()<now-3600e3) return; if(d.getHours()%2!==0) return; cols.push(j); });
+    m.zeiten.forEach(function(z,j){ var d=wgDate(z); if(d.getTime()<now-3600e3) return;
+      var step=j>0?(wgDate(z)-wgDate(m.zeiten[j-1]))/3600e3:(m.zeiten.length>1?(wgDate(m.zeiten[1])-d)/3600e3:1);
+      if(step<2 && d.getHours()%2!==0) return; cols.push(j); });
     var age=(now-wgDate(WG.abgerufen).getTime())/3600e3;
     var html='';
     if(age>6) html+='<div class="warnbox">⚠️ Die Windguru-Daten sind '+Math.round(age)+' Stunden alt. Der automatische Abruf hat zuletzt nicht geklappt.</div>';
