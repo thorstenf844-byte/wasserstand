@@ -8,7 +8,7 @@
   :root {
     color-scheme: light;
     --bg: #eef3f5; --card: #ffffff; --text: #12262f; --muted: #557079;
-    --line: #d5e0e4; --accent: #0b6a8a; --error: #a12f24;
+    --line: #d5e0e4; --accent: #0b6a8a; --error: #a12f24; --alarm: #d32f2f;
     --warn-bg: #fff4e0; --warn-line: #e8a33d; --warn-text: #7a4a00;
     --measured: #2a78d6; --forecast: #eb6834; --tide: #9aa9af;
   }
@@ -16,7 +16,7 @@
     :root:not([data-theme="light"]) {
       color-scheme: dark;
       --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
-      --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+      --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e; --alarm: #ff6b6b;
       --warn-bg: #3a2a10; --warn-line: #c98a2a; --warn-text: #ffd08a;
       --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
     }
@@ -24,7 +24,7 @@
   :root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0d1a20; --card: #15262e; --text: #e8f1f4; --muted: #9bb3bc;
-    --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e;
+    --line: #2a414b; --accent: #6cc4e0; --error: #f08a7e; --alarm: #ff6b6b;
     --warn-bg: #3a2a10; --warn-line: #c98a2a; --warn-text: #ffd08a;
     --measured: #3987e5; --forecast: #d95926; --tide: #6d828b;
   }
@@ -57,6 +57,7 @@
   #chart text { font: 11px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--muted); font-variant-numeric: tabular-nums; }
   #chart text.strong { fill: var(--text); font-weight: 600; }
   #chart text.ref { fill: var(--text); font-size: 10.5px; }
+  #chart text.alarm { fill: var(--alarm); font-size: 10.5px; font-weight: 600; }
   #tip {
     position: absolute; top: 0; pointer-events: none; background: var(--card); color: var(--text);
     border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .8rem;
@@ -374,6 +375,7 @@
     events.filter(inWindow).forEach((e) => values.push(e.cm));
     if (meanHigh !== null) values.push(meanHigh);
     if (meanLow !== null) values.push(meanLow);
+    values.push(LIMIT_HW, LIMIT_NW);
     const yMin = Math.floor(Math.min(...values) / 100) * 100;
     const yMax = Math.ceil(Math.max(...values) / 100) * 100;
 
@@ -413,6 +415,12 @@
       el("line", { x1: m.left, x2: width - m.right + 2, y1: y(v), y2: y(v), stroke: "var(--muted)", "stroke-width": 1, opacity: 0.7 }, svg);
       el("text", { x: width - m.right + 5, y: y(v) - 3, class: "ref strong" }, svg, name);
       el("text", { x: width - m.right + 5, y: y(v) + 11, class: "ref" }, svg, decimal(v) + " m");
+    });
+
+    // Red alarm lines at the warning limits
+    [LIMIT_HW, LIMIT_NW].forEach((v) => {
+      el("line", { x1: m.left, x2: width - m.right + 2, y1: y(v), y2: y(v), stroke: "var(--alarm)", "stroke-width": 1.5, "stroke-dasharray": "6 4" }, svg);
+      el("text", { x: width - m.right + 5, y: y(v) + 4, class: "alarm" }, svg, decimal(v) + " m");
     });
 
     const path = (series, color, w) => {
@@ -580,6 +588,12 @@
       item.append(swatch, text);
       legend.append(item);
     });
+    const alarm = document.createElement("span");
+    const alarmSwatch = document.createElement("i");
+    alarmSwatch.style.background = "var(--alarm)";
+    alarmSwatch.style.height = "2px";
+    alarm.append(alarmSwatch, "Alarmgrenze (Hochwasser " + metres(LIMIT_HW) + ", Niedrigwasser " + metres(LIMIT_NW) + ")");
+    legend.append(alarm);
     $("chart-card").hidden = false;
     lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh, meanLow };
     drawChart(lastData);
