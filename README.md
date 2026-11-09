@@ -33,7 +33,7 @@ Bedeutung auf der Seite:
 
 ## Push-Warnung
 
-Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird ein **Hochwasser unter 5,80 m oder über 7,50 m** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
+Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird eine **Sturmflut (Hochwasser über 7,50 m)**, ein **niedriges Hochwasser (unter 5,80 m)** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
 
 - In der Wasserkurve sind die Grenzen als rote, gestrichelte Alarmlinien eingezeichnet.
 - Dieselben Fälle zeigt die Webseite oben als gelben Warnhinweis an, und in der Tabelle sind die betroffenen Höhen markiert.

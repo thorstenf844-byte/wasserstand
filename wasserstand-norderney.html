@@ -151,6 +151,7 @@
   const LIMIT_HW = 580, LIMIT_HW_HIGH = 750, LIMIT_NW = 340, WARN_DAYS = 3;
   const isHigh = (e) => e.event === "HW" && e.cm > LIMIT_HW_HIGH;
   const isLow = (e) => isHigh(e) || e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
+  const alarmKind = (e) => isHigh(e) ? "Sturmflut" : e.event === "HW" ? "Niedriges Hochwasser" : "Niedrigwasser";
   const HOUR = 3600 * 1000;
   const TZ = "Europe/Berlin";
 
@@ -289,14 +290,15 @@
       const detail = document.createElement("span");
       const diff = meanDiff(e, forecast);
       detail.textContent = (diff ? " – " + diff : "") + " · " + e.source;
-      li.append((e.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(e.t, now) + ": " + metres(e.cm), detail);
+      li.append(alarmKind(e) + " " + when(e.t, now) + ": " + metres(e.cm), detail);
       list.append(li);
     });
-    const high = low.filter(isHigh).length;
-    $("warning-title").textContent = "⚠ " + (high === 0 ? "Niedriger Wasserstand erwartet"
-      : high === low.length ? "Hoher Wasserstand erwartet" : "Auffälliger Wasserstand erwartet");
-    $("warning-rule").textContent = "Gewarnt wird, wenn in den nächsten " + WARN_DAYS + " Tagen ein Hochwasser unter " +
-      metres(LIMIT_HW) + " oder über " + metres(LIMIT_HW_HIGH) + " oder ein Niedrigwasser unter " + metres(LIMIT_NW) + " erwartet wird.";
+    const order = ["Sturmflut", "Niedriges Hochwasser", "Niedrigwasser"];
+    const kinds = [...new Set(low.map(alarmKind))].sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map((k, i) => i === 0 ? k : k.replace("Niedriges", "niedriges"));
+    $("warning-title").textContent = "⚠ " + (kinds.length > 1 ? kinds.slice(0, -1).join(", ") + " und " + kinds[kinds.length - 1] : kinds[0]) + " erwartet";
+    $("warning-rule").textContent = "Gewarnt wird, wenn in den nächsten " + WARN_DAYS + " Tagen eine Sturmflut über " +
+      metres(LIMIT_HW_HIGH) + ", ein niedriges Hochwasser unter " + metres(LIMIT_HW) + " oder ein Niedrigwasser unter " + metres(LIMIT_NW) + " erwartet wird.";
     $("warning").hidden = low.length === 0;
   }
 
@@ -592,12 +594,14 @@
       item.append(swatch, text);
       legend.append(item);
     });
-    const alarm = document.createElement("span");
-    const alarmSwatch = document.createElement("i");
-    alarmSwatch.style.background = "var(--alarm)";
-    alarmSwatch.style.height = "2px";
-    alarm.append(alarmSwatch, "Alarmgrenze (Hochwasser " + metres(LIMIT_HW) + " / " + metres(LIMIT_HW_HIGH) + ", Niedrigwasser " + metres(LIMIT_NW) + ")");
-    legend.append(alarm);
+    [["Sturmflut", LIMIT_HW_HIGH], ["Niedriges Hochwasser", LIMIT_HW], ["Niedrigwasser", LIMIT_NW]].forEach(([name, v]) => {
+      const alarm = document.createElement("span");
+      const alarmSwatch = document.createElement("i");
+      alarmSwatch.style.background = "var(--alarm)";
+      alarmSwatch.style.height = "2px";
+      alarm.append(alarmSwatch, name + " " + metres(v));
+      legend.append(alarm);
+    });
     $("chart-card").hidden = false;
     lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh, meanLow };
     drawChart(lastData);

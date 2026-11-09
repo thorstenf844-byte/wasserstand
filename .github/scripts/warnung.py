@@ -1,8 +1,9 @@
 """Push-Warnung bei auffälligem Hoch- oder Niedrigwasser (Pegel Norderney, Riffgat).
 
 Liest norderney.json (BSH-Vorhersage) und schickt über ntfy eine Nachricht,
-wenn in den nächsten 3 Tagen ein Hochwasser unter 5,80 m oder ein
-Niedrigwasser unter 3,40 m erwartet wird. Jedes Ereignis wird nur einmal
+wenn in den nächsten 3 Tagen eine Sturmflut (Hochwasser über 7,50 m),
+ein niedriges Hochwasser (unter 5,80 m) oder ein Niedrigwasser unter 3,40 m
+erwartet wird. Jedes Ereignis wird nur einmal
 gemeldet; gemeldete Ereignisse stehen in warnungen.json.
 """
 import json
@@ -66,8 +67,8 @@ def main():
         return
 
     if os.environ.get("TEST") == "true":
-        senden(kanal, "Test: Pegel Norderney", "Die Warnung ist eingerichtet. Du bekommst eine Nachricht, wenn ein Hochwasser unter "
-               + meter(GRENZE_HOCHWASSER_CM) + " oder über " + meter(GRENZE_HOCHWASSER_HOCH_CM) + " oder ein Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + " erwartet wird.")
+        senden(kanal, "Test: Pegel Norderney", "Die Warnung ist eingerichtet. Du bekommst eine Nachricht, wenn eine Sturmflut über "
+               + meter(GRENZE_HOCHWASSER_HOCH_CM) + ", ein niedriges Hochwasser unter " + meter(GRENZE_HOCHWASSER_CM) + " oder ein Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + " erwartet wird.")
         print("Testnachricht verschickt.")
 
     with open("norderney.json", encoding="utf-8") as f:
@@ -81,7 +82,7 @@ def main():
     jetzt = datetime.now(timezone.utc)
     bis = jetzt + timedelta(days=TAGE_VORAUS)
     neu = []
-    hohe = 0
+    arten = []
     for e in vorhersage.get("high_water_low_water", []):
         t = datetime.fromisoformat(e["event_timestamp"])
         if not (jetzt < t <= bis):
@@ -97,30 +98,28 @@ def main():
         schluessel = e["event"] + " " + e["event_timestamp"]
         if schluessel in gemeldet:
             continue
-        if zu_hoch:
-            hohe += 1
+        art = "Sturmflut" if zu_hoch else ("Niedriges Hochwasser" if hoch else "Niedrigwasser")
+        if art not in arten:
+            arten.append(art)
         gemeldet[schluessel] = cm
         mittel = zahl(vorhersage.get("mean_high_water" if hoch else "mean_low_water"))
         abstand = ""
         if mittel is not None:
             d = round(cm - mittel)
             abstand = f"{abs(d)} cm {'unter' if d < 0 else 'über'} {'MHW' if hoch else 'MNW'}, " if d else f"genau {'MHW' if hoch else 'MNW'}, "
-        neu.append(f"{'Hochwasser' if hoch else 'Niedrigwasser'} {zeit(t)}: {meter(cm)} ({abstand}{quelle})")
+        neu.append(f"{art} {zeit(t)}: {meter(cm)} ({abstand}{quelle})")
 
     # Vergangene Ereignisse aus der Liste entfernen
     gemeldet = {k: v for k, v in gemeldet.items()
                 if datetime.fromisoformat(k.split(" ", 1)[1]) > jetzt - timedelta(days=2)}
 
     if neu:
-        if hohe == len(neu):
-            titel = "Hoher Wasserstand erwartet" if hohe == 1 else f"{hohe} hohe Wasserstände erwartet"
-        elif hohe == 0:
-            titel = "Niedriger Wasserstand erwartet" if len(neu) == 1 else f"{len(neu)} niedrige Wasserstände erwartet"
-        else:
-            titel = f"{len(neu)} auffällige Wasserstände erwartet"
-        senden(kanal, titel, "\n".join(neu) + "\n\nGrenzen: Hochwasser unter " + meter(GRENZE_HOCHWASSER_CM)
-               + " oder über " + meter(GRENZE_HOCHWASSER_HOCH_CM) + ", Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + ".",
-               5 if hohe else 4)
+        reihenfolge = ["Sturmflut", "Niedriges Hochwasser", "Niedrigwasser"]
+        namen = [a if i == 0 else a.replace("Niedriges", "niedriges") for i, a in enumerate(sorted(arten, key=reihenfolge.index))]
+        titel = (", ".join(namen[:-1]) + " und " + namen[-1] if len(namen) > 1 else namen[0]) + " erwartet"
+        senden(kanal, titel, "\n".join(neu) + "\n\nAlarmgrenzen: Sturmflut über " + meter(GRENZE_HOCHWASSER_HOCH_CM)
+               + ", niedriges Hochwasser unter " + meter(GRENZE_HOCHWASSER_CM) + ", Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + ".",
+               5 if "Sturmflut" in arten else 4)
         print("Warnung verschickt:\n" + "\n".join(neu))
     else:
         print("Keine neue Warnung.")
