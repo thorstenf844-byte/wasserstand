@@ -1,7 +1,7 @@
 """Push-Warnung bei auffälligem Hoch- oder Niedrigwasser (Pegel Norderney, Riffgat).
 
 Liest norderney.json (BSH-Vorhersage) und schickt über ntfy eine Nachricht,
-wenn in den nächsten 3 Tagen eine Sturmflut (Hochwasser über 7,50 m),
+wenn in den nächsten 3 Tagen eine Sturmflut (Hochwasser über 7,00 m),
 ein niedriges Hochwasser (unter 5,80 m) oder ein Niedrigwasser unter 3,40 m
 erwartet wird. Jedes Ereignis wird nur einmal
 gemeldet; gemeldete Ereignisse stehen in warnungen.json.
@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 GRENZE_HOCHWASSER_CM = 580   # Warnung, wenn ein Hochwasser darunter liegt
-GRENZE_HOCHWASSER_HOCH_CM = 750  # Warnung, wenn ein Hochwasser darüber liegt
+GRENZE_HOCHWASSER_HOCH_CM = 700  # Warnung, wenn ein Hochwasser darüber liegt
 GRENZE_NIEDRIGWASSER_CM = 340  # Warnung, wenn ein Niedrigwasser darunter liegt
 TAGE_VORAUS = 3
 SEITE = "https://thorstenf844-byte.github.io/wasserstand/wasserstand-norderney.html"

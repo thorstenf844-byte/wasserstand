@@ -148,7 +148,7 @@
   const PEGEL_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/";
   const REFRESH_MS = 5 * 60 * 1000;
   // Gleiche Grenzen wie in .github/scripts/warnung.py
-  const LIMIT_HW = 580, LIMIT_HW_HIGH = 750, LIMIT_NW = 340, WARN_DAYS = 3;
+  const LIMIT_HW = 580, LIMIT_HW_HIGH = 700, LIMIT_NW = 340, WARN_DAYS = 3;
   const isHigh = (e) => e.event === "HW" && e.cm > LIMIT_HW_HIGH;
   const isLow = (e) => isHigh(e) || e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
   const alarmKind = (e) => isHigh(e) ? "Sturmflut" : e.event === "HW" ? "Niedriges Hochwasser" : "Niedrigwasser";
