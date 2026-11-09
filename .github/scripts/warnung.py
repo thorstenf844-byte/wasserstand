@@ -1,4 +1,4 @@
-"""Push-Warnung bei niedrigem Hoch- oder Niedrigwasser (Pegel Norderney, Riffgat).
+"""Push-Warnung bei auffälligem Hoch- oder Niedrigwasser (Pegel Norderney, Riffgat).
 
 Liest norderney.json (BSH-Vorhersage) und schickt über ntfy eine Nachricht,
 wenn in den nächsten 3 Tagen ein Hochwasser unter 5,80 m oder ein
@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 GRENZE_HOCHWASSER_CM = 580   # Warnung, wenn ein Hochwasser darunter liegt
+GRENZE_HOCHWASSER_HOCH_CM = 750  # Warnung, wenn ein Hochwasser darüber liegt
 GRENZE_NIEDRIGWASSER_CM = 340  # Warnung, wenn ein Niedrigwasser darunter liegt
 TAGE_VORAUS = 3
 SEITE = "https://thorstenf844-byte.github.io/wasserstand/wasserstand-norderney.html"
@@ -52,8 +53,8 @@ def veroeffentlichen(nachricht):
         antwort.read()
 
 
-def senden(kanal, titel, text):
-    nachricht = {"topic": kanal, "title": titel, "message": text, "click": SEITE, "tags": ["ocean"], "priority": 4}
+def senden(kanal, titel, text, prioritaet=4):
+    nachricht = {"topic": kanal, "title": titel, "message": text, "click": SEITE, "tags": ["ocean"], "priority": prioritaet}
     veroeffentlichen(nachricht)
 
 
@@ -66,7 +67,7 @@ def main():
 
     if os.environ.get("TEST") == "true":
         senden(kanal, "Test: Pegel Norderney", "Die Warnung ist eingerichtet. Du bekommst eine Nachricht, wenn ein Hochwasser unter "
-               + meter(GRENZE_HOCHWASSER_CM) + " oder ein Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + " erwartet wird.")
+               + meter(GRENZE_HOCHWASSER_CM) + " oder über " + meter(GRENZE_HOCHWASSER_HOCH_CM) + " oder ein Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + " erwartet wird.")
         print("Testnachricht verschickt.")
 
     with open("norderney.json", encoding="utf-8") as f:
@@ -80,6 +81,7 @@ def main():
     jetzt = datetime.now(timezone.utc)
     bis = jetzt + timedelta(days=TAGE_VORAUS)
     neu = []
+    hohe = 0
     for e in vorhersage.get("high_water_low_water", []):
         t = datetime.fromisoformat(e["event_timestamp"])
         if not (jetzt < t <= bis):
@@ -88,11 +90,15 @@ def main():
         if cm is None:
             continue
         hoch = e["event"] == "HW"
-        if cm >= (GRENZE_HOCHWASSER_CM if hoch else GRENZE_NIEDRIGWASSER_CM):
+        zu_hoch = hoch and cm > GRENZE_HOCHWASSER_HOCH_CM
+        zu_niedrig = cm < (GRENZE_HOCHWASSER_CM if hoch else GRENZE_NIEDRIGWASSER_CM)
+        if not (zu_hoch or zu_niedrig):
             continue
         schluessel = e["event"] + " " + e["event_timestamp"]
         if schluessel in gemeldet:
             continue
+        if zu_hoch:
+            hohe += 1
         gemeldet[schluessel] = cm
         mittel = zahl(vorhersage.get("mean_high_water" if hoch else "mean_low_water"))
         abstand = ""
@@ -106,9 +112,15 @@ def main():
                 if datetime.fromisoformat(k.split(" ", 1)[1]) > jetzt - timedelta(days=2)}
 
     if neu:
-        titel = "Niedriger Wasserstand erwartet" if len(neu) == 1 else f"{len(neu)} niedrige Wasserstände erwartet"
+        if hohe == len(neu):
+            titel = "Hoher Wasserstand erwartet" if hohe == 1 else f"{hohe} hohe Wasserstände erwartet"
+        elif hohe == 0:
+            titel = "Niedriger Wasserstand erwartet" if len(neu) == 1 else f"{len(neu)} niedrige Wasserstände erwartet"
+        else:
+            titel = f"{len(neu)} auffällige Wasserstände erwartet"
         senden(kanal, titel, "\n".join(neu) + "\n\nGrenzen: Hochwasser unter " + meter(GRENZE_HOCHWASSER_CM)
-               + ", Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + ".")
+               + " oder über " + meter(GRENZE_HOCHWASSER_HOCH_CM) + ", Niedrigwasser unter " + meter(GRENZE_NIEDRIGWASSER_CM) + ".",
+               5 if hohe else 4)
         print("Warnung verschickt:\n" + "\n".join(neu))
     else:
         print("Keine neue Warnung.")

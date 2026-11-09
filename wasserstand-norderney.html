@@ -96,7 +96,7 @@
   <div class="sub">Höhen in Metern über Pegelnull</div>
 
   <section class="card warning" id="warning" hidden>
-    <h2>⚠ Niedriger Wasserstand erwartet</h2>
+    <h2 id="warning-title">⚠ Niedriger Wasserstand erwartet</h2>
     <ul id="warning-list"></ul>
     <div class="note" id="warning-rule"></div>
   </section>
@@ -148,8 +148,9 @@
   const PEGEL_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2/stations/c0244c0e-6ae6-40cb-a967-4039b2a0ce7c/W/";
   const REFRESH_MS = 5 * 60 * 1000;
   // Gleiche Grenzen wie in .github/scripts/warnung.py
-  const LIMIT_HW = 580, LIMIT_NW = 340, WARN_DAYS = 3;
-  const isLow = (e) => e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
+  const LIMIT_HW = 580, LIMIT_HW_HIGH = 750, LIMIT_NW = 340, WARN_DAYS = 3;
+  const isHigh = (e) => e.event === "HW" && e.cm > LIMIT_HW_HIGH;
+  const isLow = (e) => isHigh(e) || e.cm < (e.event === "HW" ? LIMIT_HW : LIMIT_NW);
   const HOUR = 3600 * 1000;
   const TZ = "Europe/Berlin";
 
@@ -291,8 +292,11 @@
       li.append((e.event === "HW" ? "Hochwasser " : "Niedrigwasser ") + when(e.t, now) + ": " + metres(e.cm), detail);
       list.append(li);
     });
+    const high = low.filter(isHigh).length;
+    $("warning-title").textContent = "⚠ " + (high === 0 ? "Niedriger Wasserstand erwartet"
+      : high === low.length ? "Hoher Wasserstand erwartet" : "Auffälliger Wasserstand erwartet");
     $("warning-rule").textContent = "Gewarnt wird, wenn in den nächsten " + WARN_DAYS + " Tagen ein Hochwasser unter " +
-      metres(LIMIT_HW) + " oder ein Niedrigwasser unter " + metres(LIMIT_NW) + " erwartet wird.";
+      metres(LIMIT_HW) + " oder über " + metres(LIMIT_HW_HIGH) + " oder ein Niedrigwasser unter " + metres(LIMIT_NW) + " erwartet wird.";
     $("warning").hidden = low.length === 0;
   }
 
@@ -375,7 +379,7 @@
     events.filter(inWindow).forEach((e) => values.push(e.cm));
     if (meanHigh !== null) values.push(meanHigh);
     if (meanLow !== null) values.push(meanLow);
-    values.push(LIMIT_HW, LIMIT_NW);
+    values.push(LIMIT_HW, LIMIT_HW_HIGH, LIMIT_NW);
     const yMin = Math.floor(Math.min(...values) / 100) * 100;
     const yMax = Math.ceil(Math.max(...values) / 100) * 100;
 
@@ -418,7 +422,7 @@
     });
 
     // Red alarm lines at the warning limits
-    [LIMIT_HW, LIMIT_NW].forEach((v) => {
+    [LIMIT_HW_HIGH, LIMIT_HW, LIMIT_NW].forEach((v) => {
       el("line", { x1: m.left, x2: width - m.right + 2, y1: y(v), y2: y(v), stroke: "var(--alarm)", "stroke-width": 1.5, "stroke-dasharray": "6 4" }, svg);
       el("text", { x: width - m.right + 5, y: y(v) + 4, class: "alarm" }, svg, decimal(v) + " m");
     });
@@ -592,7 +596,7 @@
     const alarmSwatch = document.createElement("i");
     alarmSwatch.style.background = "var(--alarm)";
     alarmSwatch.style.height = "2px";
-    alarm.append(alarmSwatch, "Alarmgrenze (Hochwasser " + metres(LIMIT_HW) + ", Niedrigwasser " + metres(LIMIT_NW) + ")");
+    alarm.append(alarmSwatch, "Alarmgrenze (Hochwasser " + metres(LIMIT_HW) + " / " + metres(LIMIT_HW_HIGH) + ", Niedrigwasser " + metres(LIMIT_NW) + ")");
     legend.append(alarm);
     $("chart-card").hidden = false;
     lastData = { now, measured: measuredLine, forecastLine, tide, events, meanHigh, meanLow };
