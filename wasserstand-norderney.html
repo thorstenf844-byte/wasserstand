@@ -278,7 +278,7 @@
     if (mean === null) return "";
     const diff = Math.round(e.cm - mean);
     const name = e.event === "HW" ? "MHW" : "MNW";
-    return diff === 0 ? "genau " + name : Math.abs(diff) + " cm " + (diff < 0 ? "unter " : "über ") + name + " (" + metres(mean) + ")";
+    return diff === 0 ? "genau " + name : Math.abs(diff) + "\u00a0cm " + (diff < 0 ? "unter " : "über ") + name + " " + metres(mean);
   }
 
   function showWarning(now, events, forecast) {
@@ -289,7 +289,7 @@
       const li = document.createElement("li");
       const detail = document.createElement("span");
       const diff = meanDiff(e, forecast);
-      detail.textContent = (diff ? " – " + diff : "") + " · " + e.source;
+      detail.textContent = " (" + (diff ? diff + ", " : "") + e.source + ")";
       li.append(alarmKind(e) + " " + when(e.t, now) + ": " + metres(e.cm), detail);
       list.append(li);
     });
