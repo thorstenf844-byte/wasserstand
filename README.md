@@ -35,6 +35,8 @@ Bedeutung auf der Seite:
 
 Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird eine **Sturmflut (Hochwasser über 7,00 m)**, ein **niedriges Hochwasser (unter 5,80 m)** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
 
+**Entwarnung:** Liegt ein gemeldetes Ereignis in einer späteren Vorhersage wieder im normalen Bereich, und zwar mindestens 5 cm von der Grenze entfernt (damit es an der Grenze nicht stündlich hin und her meldet), kommt eine kurze Entwarnung. Kippt es danach erneut, wird es wieder gemeldet. Der Abstand steht als `ENTWARNUNG_PUFFER_CM` in `warnung.py`.
+
 - In der Wasserkurve sind die Grenzen als rote, gestrichelte Alarmlinien eingezeichnet.
 - Dieselben Fälle zeigt die Webseite oben als gelben Warnhinweis an, und in der Tabelle sind die betroffenen Höhen markiert.
 - Die Grenzen stehen oben in `.github/scripts/warnung.py` (`GRENZE_HOCHWASSER_CM`, `GRENZE_HOCHWASSER_HOCH_CM`, `GRENZE_NIEDRIGWASSER_CM`, `TAGE_VORAUS`). Bei einer Änderung auch in `wasserstand-norderney.html` anpassen (`LIMIT_HW`, `LIMIT_HW_HIGH`, `LIMIT_NW`, `WARN_DAYS`).
