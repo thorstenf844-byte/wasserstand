@@ -5,6 +5,10 @@ wenn in den nächsten 3 Tagen eine Sturmflut (Hochwasser über 7,00 m),
 ein niedriges Hochwasser (unter 5,80 m) oder ein Niedrigwasser unter 3,40 m
 erwartet wird. Jedes Ereignis wird nur einmal
 gemeldet; gemeldete Ereignisse stehen in warnungen.json.
+
+Liegt ein gemeldetes Ereignis später wieder im normalen Bereich (mindestens
+ENTWARNUNG_PUFFER_CM von der Grenze entfernt), kommt eine Entwarnung. Danach
+kann dasselbe Ereignis erneut gemeldet werden, falls es wieder kippt.
 """
 import json
 import os
@@ -17,6 +21,7 @@ GRENZE_HOCHWASSER_CM = 580   # Warnung, wenn ein Hochwasser darunter liegt
 GRENZE_HOCHWASSER_HOCH_CM = 700  # Warnung, wenn ein Hochwasser darüber liegt
 GRENZE_NIEDRIGWASSER_CM = 340  # Warnung, wenn ein Niedrigwasser darunter liegt
 TAGE_VORAUS = 3
+ENTWARNUNG_PUFFER_CM = 5  # Entwarnung erst, wenn der Wert so weit zurück im normalen Bereich liegt
 SEITE = "https://thorstenf844-byte.github.io/wasserstand/wasserstand-norderney.html"
 GEMELDET = "warnungen.json"
 BERLIN = ZoneInfo("Europe/Berlin")
@@ -54,8 +59,8 @@ def veroeffentlichen(nachricht):
         antwort.read()
 
 
-def senden(kanal, titel, text, prioritaet=4):
-    nachricht = {"topic": kanal, "title": titel, "message": text, "click": SEITE, "tags": ["ocean"], "priority": prioritaet}
+def senden(kanal, titel, text, prioritaet=4, symbol="ocean"):
+    nachricht = {"topic": kanal, "title": titel, "message": text, "click": SEITE, "tags": [symbol], "priority": prioritaet}
     veroeffentlichen(nachricht)
 
 
@@ -83,8 +88,26 @@ def main():
     bis = jetzt + timedelta(days=TAGE_VORAUS)
     neu = []
     arten = []
+    entwarnt = []
     for e in vorhersage.get("high_water_low_water", []):
         t = datetime.fromisoformat(e["event_timestamp"])
+        schluessel = e["event"] + " " + e["event_timestamp"]
+        alt = zahl(gemeldet.get(schluessel))
+        if alt is not None and t > jetzt:
+            cm, quelle = wert(e)
+            if cm is not None:
+                hoch = e["event"] == "HW"
+                if hoch and alt > GRENZE_HOCHWASSER_HOCH_CM:
+                    normal = GRENZE_HOCHWASSER_CM <= cm <= GRENZE_HOCHWASSER_HOCH_CM - ENTWARNUNG_PUFFER_CM
+                elif hoch:
+                    normal = GRENZE_HOCHWASSER_CM + ENTWARNUNG_PUFFER_CM <= cm <= GRENZE_HOCHWASSER_HOCH_CM
+                else:
+                    normal = cm >= GRENZE_NIEDRIGWASSER_CM + ENTWARNUNG_PUFFER_CM
+                if normal:
+                    del gemeldet[schluessel]
+                    entwarnt.append(f"{'Hochwasser' if hoch else 'Niedrigwasser'} {zeit(t)}: jetzt {meter(cm)} erwartet "
+                                    f"(gemeldet waren {meter(alt)}, {quelle})")
+                    continue
         if not (jetzt < t <= bis):
             continue
         cm, quelle = wert(e)
@@ -95,7 +118,6 @@ def main():
         zu_niedrig = cm < (GRENZE_HOCHWASSER_CM if hoch else GRENZE_NIEDRIGWASSER_CM)
         if not (zu_hoch or zu_niedrig):
             continue
-        schluessel = e["event"] + " " + e["event_timestamp"]
         if schluessel in gemeldet:
             continue
         art = "Sturmflut" if zu_hoch else ("Niedriges Hochwasser" if hoch else "Niedrigwasser")
@@ -123,6 +145,10 @@ def main():
         print("Warnung verschickt:\n" + "\n".join(neu))
     else:
         print("Keine neue Warnung.")
+
+    if entwarnt:
+        senden(kanal, "Entwarnung: Pegel Norderney", "\n".join(entwarnt) + "\n\nLiegt wieder im normalen Bereich.", 3, "white_check_mark")
+        print("Entwarnung verschickt:\n" + "\n".join(entwarnt))
 
     with open(GEMELDET, "w", encoding="utf-8") as f:
         json.dump(gemeldet, f, ensure_ascii=False, indent=1, sort_keys=True)
