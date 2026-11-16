@@ -26,6 +26,8 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 - **Vorhersage, Gezeiten, Hoch- und Niedrigwasser:** Bundesamt für Seeschifffahrt und Hydrographie (BSH), Lizenz CC BY 4.0.
   Der Browser darf die BSH-Daten nicht direkt abrufen. Deshalb holt GitHub sie jede Stunde (Minute 17) und legt sie als `norderney.json` hier ab. Die Seite liest dann diese Datei.
 
+Oben rechts neben der Überschrift steht, wann das BSH die Scheitelvorhersage zuletzt aktualisiert hat (Feld `forecast_timestamp`), und wann die nächste zu erwarten ist. Den nächsten Termin nennt das BSH nicht; er ist aus dem bisherigen Verlauf abgelesen (etwa 07:20, 13:20, 19:30 und 23:55 Uhr, `PEAK_SLOTS` in der Seite) und deshalb nur ungefähr. Die Seite zeigt den Stand aus `norderney.json`; sie kann also bis zum nächsten stündlichen Abruf hinter der BSH-Seite liegen.
+
 Bedeutung auf der Seite:
 - **Gemessen:** tatsächlich gemessener Wasserstand.
 - **Vorhersage:** BSH-Vorhersage inklusive Wetter und Wind („BSH“ oder „Modell“ in der Tabelle).
