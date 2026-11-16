@@ -36,6 +36,9 @@
   main { max-width: 640px; margin: 0 auto; padding: 24px 16px 40px; }
   h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
   .sub { color: var(--muted); font-size: .9rem; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 16px; }
+  .status { color: var(--muted); font-size: .8rem; line-height: 1.4; text-align: right; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .status b { color: var(--text); font-weight: 600; white-space: nowrap; }
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 20px; margin-top: 16px;
@@ -92,8 +95,16 @@
 </head>
 <body>
 <main>
-  <h1>Pegel Norderney, Riffgat</h1>
-  <div class="sub">Höhen in Metern über Pegelnull</div>
+  <div class="head">
+    <div>
+      <h1>Pegel Norderney, Riffgat</h1>
+      <div class="sub">Höhen in Metern über Pegelnull</div>
+    </div>
+    <div class="status" id="status" hidden>
+      <div>Scheitelwertvorhersage aktualisiert: <b id="status-peak">–</b></div>
+      <div id="status-next"></div>
+    </div>
+  </div>
 
   <section class="card warning" id="warning" hidden>
     <h2 id="warning-title">⚠ Niedriger Wasserstand erwartet</h2>
@@ -608,6 +619,38 @@
     chartLabel();
   }
 
+  // Kopfzeile: Stand der BSH-Scheitelvorhersage (forecast_timestamp) und die nächste.
+  // Das BSH nennt den nächsten Termin nicht. Die Zeiten sind die üblichen
+  // Veröffentlichungszeiten (Ortszeit, Minuten seit Mitternacht), abgelesen aus dem Verlauf.
+  const PEAK_SLOTS = [7 * 60 + 20, 13 * 60 + 20, 19 * 60 + 30, 23 * 60 + 55];
+  const fullDate = (d) => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ })
+      .formatToParts(d).map((p) => [p.type, p.value]));
+    return parts.weekday.replace(".", "") + ", " + parts.day + "." + parts.month + "." + parts.year;
+  };
+  function nextPeakForecast(stand) {
+    // erster üblicher Termin, der mindestens 3 Stunden nach dem aktuellen Stand liegt
+    const base = new Date(stand.getTime() + 3 * HOUR);
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TZ })
+      .formatToParts(base).map((p) => [p.type, Number(p.value)]));
+    const minuteOfDay = parts.hour * 60 + parts.minute;
+    const slot = PEAK_SLOTS.find((m) => m >= minuteOfDay);
+    const ahead = slot !== undefined ? slot - minuteOfDay : PEAK_SLOTS[0] + 24 * 60 - minuteOfDay;
+    const next = new Date(base.getTime() + ahead * 60000);
+    next.setSeconds(0, 0);
+    return next;
+  }
+  function showStatus(now, forecast) {
+    const stand = forecast && forecast.forecast_timestamp ? parseTime(forecast.forecast_timestamp) : null;
+    if (!stand) { $("status").hidden = true; return; }
+    $("status-peak").textContent = fullDate(stand) + ", " + clock(stand);
+    const next = nextPeakForecast(stand);
+    $("status-next").textContent = next > now
+      ? "Nächste voraussichtlich gegen " + when(next, now)
+      : "Neue seit etwa " + when(next, now) + " fällig, kommt mit dem nächsten Abruf";
+    $("status").hidden = false;
+  }
+
   async function load() {
     const now = new Date();
     $("error").hidden = true;
@@ -657,6 +700,7 @@
     $("later").hidden = !later;
     $("divider").hidden = !later;
 
+    showStatus(now, forecast);
     showWarning(now, events, forecast);
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
