@@ -11,9 +11,9 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 | Datei | Wofür |
 |---|---|
 | `wasserstand-norderney.html` | Die Webseite selbst (eine einzige Datei mit allem: Aufbau, Aussehen, Programm). |
-| `norderney.json` | Die BSH-Vorhersage, automatisch jede Stunde neu abgelegt. Nicht von Hand bearbeiten. |
-| `.github/workflows/wasserstand.yml` | Der Automatik-Ablauf, der die Vorhersage stündlich holt und speichert. |
-| `.github/scripts/warnung.py` | Prüft stündlich die Vorhersage und schickt eine Push-Warnung (siehe unten). |
+| `norderney.json` | Die BSH-Vorhersage, automatisch alle halbe Stunde neu abgelegt. Nicht von Hand bearbeiten. |
+| `.github/workflows/wasserstand.yml` | Der Automatik-Ablauf, der die Vorhersage halbstündlich holt und speichert. |
+| `.github/scripts/warnung.py` | Prüft halbstündlich die Vorhersage und schickt eine Push-Warnung (siehe unten). |
 | `warnungen.json` | Merkliste, welche Ereignisse schon gemeldet wurden. Wird automatisch geschrieben. |
 | `wind-norderney.html` | Wind-Dashboard Norderney: DWD-Messwerte und Warnungen, 7-Tage-Vorhersage in Beaufort, Stundenverlauf, Aktivitäten-Ampel, Modellvergleich, dazu Windguru und Windfinder. Live: https://thorstenf844-byte.github.io/wasserstand/wind-norderney.html |
 | `windguru.json` | Windguru-Vorhersage für Norderney (Spot 20), automatisch jede Stunde neu abgelegt. Nicht von Hand bearbeiten. |
@@ -24,7 +24,8 @@ Alle Höhen sind in Metern über Pegelnull (PNP). Das mittlere Hochwasser liegt 
 
 - **Gemessener Wasserstand (jetzt):** PEGELONLINE der Wasserstraßen- und Schifffahrtsverwaltung des Bundes. Die Seite fragt ihn bei jedem Öffnen und danach alle 5 Minuten direkt ab.
 - **Vorhersage, Gezeiten, Hoch- und Niedrigwasser:** Bundesamt für Seeschifffahrt und Hydrographie (BSH), Lizenz CC BY 4.0.
-  Der Browser darf die BSH-Daten nicht direkt abrufen. Deshalb holt GitHub sie jede Stunde (Minute 17) und legt sie als `norderney.json` hier ab. Die Seite liest dann diese Datei.
+  Der Browser darf die BSH-Daten nicht direkt abrufen. Deshalb holt GitHub sie zweimal pro Stunde (Minute 17 und 47) und legt sie als `norderney.json` hier ab. Die Seite liest dann diese Datei.
+  GitHub hält diese Zeiten nicht genau ein und lässt einzelne Läufe aus. Der doppelte Abruf sorgt dafür, dass eine Lücke kaum auffällt.
 
 Bedeutung auf der Seite:
 - **Gemessen:** tatsächlich gemessener Wasserstand.
@@ -33,9 +34,9 @@ Bedeutung auf der Seite:
 
 ## Push-Warnung
 
-Nach jeder stündlichen Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird eine **Sturmflut (Hochwasser über 7,00 m)**, ein **niedriges Hochwasser (unter 5,80 m)** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
+Nach jeder Aktualisierung prüft `warnung.py` die nächsten 3 Tage. Wird eine **Sturmflut (Hochwasser über 7,00 m)**, ein **niedriges Hochwasser (unter 5,80 m)** oder ein **Niedrigwasser unter 3,40 m** erwartet, kommt eine Push-Nachricht über die App **ntfy** aufs Handy. Jedes Ereignis wird nur einmal gemeldet.
 
-**Entwarnung:** Liegt ein gemeldetes Ereignis in einer späteren Vorhersage wieder im normalen Bereich, und zwar mindestens 5 cm von der Grenze entfernt (damit es an der Grenze nicht stündlich hin und her meldet), kommt eine kurze Entwarnung. Kippt es danach erneut, wird es wieder gemeldet. Der Abstand steht als `ENTWARNUNG_PUFFER_CM` in `warnung.py`.
+**Entwarnung:** Liegt ein gemeldetes Ereignis in einer späteren Vorhersage wieder im normalen Bereich, und zwar mindestens 5 cm von der Grenze entfernt (damit es an der Grenze nicht ständig hin und her meldet), kommt eine kurze Entwarnung. Kippt es danach erneut, wird es wieder gemeldet. Der Abstand steht als `ENTWARNUNG_PUFFER_CM` in `warnung.py`.
 
 - In der Wasserkurve sind die Grenzen als rote, gestrichelte Alarmlinien eingezeichnet.
 - Dieselben Fälle zeigt die Webseite oben als gelben Warnhinweis an, und in der Tabelle sind die betroffenen Höhen markiert.
@@ -56,7 +57,8 @@ Wichtig: Das Repository muss **öffentlich** bleiben. Bei „Privat“ ist die S
 | Roter Fehlerhinweis, kein aktueller Wert | PEGELONLINE kurz nicht erreichbar. Später „Jetzt aktualisieren“ tippen. |
 | Kurve oder Tabelle fehlen, oder Vorhersage ist sehr alt | Reiter „Actions“ öffnen: Ist der letzte Lauf von „Wasserstandsdaten aktualisieren“ grün? Bei Rot: Lauf öffnen und Fehlermeldung ansehen, oder über „Run workflow“ von Hand starten. |
 | Seite gar nicht erreichbar | Einstellungen → Seiten prüfen, ob Pages noch eingeschaltet ist, und ob das Repository öffentlich ist. |
-| Automatik läuft nicht mehr | GitHub schaltet geplante Abläufe ab, wenn 60 Tage lang nichts im Repository passiert ist. Unter „Actions“ wieder aktivieren. Durch die stündlichen Speicherungen sollte das normalerweise nicht passieren. |
+| BSH zeigt schon einen neueren Stand als die Seite | GitHub hat einen Lauf verspätet oder ausgelassen. Abwarten oder unter Actions → „Wasserstandsdaten aktualisieren“ → „Run workflow“ von Hand starten. |
+| Automatik läuft nicht mehr | GitHub schaltet geplante Abläufe ab, wenn 60 Tage lang nichts im Repository passiert ist. Unter „Actions“ wieder aktivieren. Durch die regelmäßigen Speicherungen sollte das normalerweise nicht passieren. |
 
 ## Änderungen machen
 
