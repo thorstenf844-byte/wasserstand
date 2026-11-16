@@ -36,10 +36,6 @@
   main { max-width: 640px; margin: 0 auto; padding: 24px 16px 40px; }
   h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
   .sub { color: var(--muted); font-size: .9rem; }
-  .head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 16px; }
-  .status { color: var(--muted); font-size: .8rem; line-height: 1.4; text-align: right; margin-left: auto; font-variant-numeric: tabular-nums; }
-  .status b { color: var(--text); font-weight: 600; }
-  .status .late { color: var(--warn-text); font-weight: 600; }
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 20px; margin-top: 16px;
@@ -96,16 +92,8 @@
 </head>
 <body>
 <main>
-  <div class="head">
-    <div>
-      <h1>Pegel Norderney, Riffgat</h1>
-      <div class="sub">Höhen in Metern über Pegelnull</div>
-    </div>
-    <div class="status" id="status" hidden>
-      <div>Messung <b id="status-measured">–</b> · nächster Abruf <span id="status-measured-next">–</span></div>
-      <div>Vorhersage <b id="status-forecast">–</b> · nächste ab <span id="status-forecast-next">–</span><span class="late" id="status-late" hidden> · verspätet</span></div>
-    </div>
-  </div>
+  <h1>Pegel Norderney, Riffgat</h1>
+  <div class="sub">Höhen in Metern über Pegelnull</div>
 
   <section class="card warning" id="warning" hidden>
     <h2 id="warning-title">⚠ Niedriger Wasserstand erwartet</h2>
@@ -620,30 +608,8 @@
     chartLabel();
   }
 
-  // Kopfzeile: Stand der Daten und nächste Aktualisierung.
-  // Die Vorhersage holt GitHub stündlich zur Minute 17 (startet oft später).
-  const FORECAST_MINUTE = 17;
-  function showStatus(now, latest, forecast) {
-    $("status-measured").textContent = latest ? when(latest.t, now) : "–";
-    $("status-measured-next").textContent = clock(nextRefresh);
-    const stamp = forecast && (forecast.automated_curveforecast_timestamp || forecast.forecast_timestamp);
-    const stand = stamp ? parseTime(stamp) : null;
-    $("status-forecast").textContent = stand ? when(stand, now) : "–";
-    const planned = new Date(now);
-    planned.setMinutes(FORECAST_MINUTE, 0, 0);
-    if (planned <= now) planned.setTime(planned.getTime() + HOUR);
-    $("status-forecast-next").textContent = clock(planned);
-    $("status-late").hidden = !stand || now - stand < 2 * HOUR;
-    $("status").hidden = false;
-  }
-
-  let nextRefresh = new Date();
-  let refreshTimer = null;
   async function load() {
     const now = new Date();
-    clearTimeout(refreshTimer);
-    nextRefresh = new Date(now.getTime() + REFRESH_MS);
-    refreshTimer = setTimeout(load, REFRESH_MS);
     $("error").hidden = true;
     const [measured, forecast] = await Promise.all([loadMeasurements(), loadForecast()]);
     const events = upcomingEvents(forecast, now);
@@ -691,7 +657,6 @@
     $("later").hidden = !later;
     $("divider").hidden = !later;
 
-    showStatus(now, latest, forecast);
     showWarning(now, events, forecast);
     showChart(now, measured, forecast, events);
     lastForecast = forecast;
@@ -701,6 +666,7 @@
 
   $("reload").addEventListener("click", load);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  setInterval(load, REFRESH_MS);
   load();
 </script>
 </body>
